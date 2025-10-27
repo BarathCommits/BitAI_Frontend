@@ -1,0 +1,527 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-10-11",
+  "languages": [
+    {
+      "id": "javascript",
+      "name": "JavaScript / TypeScript",
+      "icon": "📱",
+      "official": true,
+      "tier": 1,
+      "popularity": 40,
+      "rating": 5,
+      "bestFor": ["Web dApps", "React", "Vue", "Node.js", "Browser apps"],
+      "install": {
+        "command": "npm install bitai-sdk",
+        "package": "bitai-sdk",
+        "manager": "npm"
+      },
+      "quickStart": {
+        "import": "import { BitAIClient } from 'bitai-sdk';",
+        "initialize": "const client = new BitAIClient();",
+        "example": "const response = await client.chat({\n  message: 'What is DeFi?',\n  userId: 'user123',\n  walletAddress: '0x...'\n});\n\nconsole.log('AI:', response.data.message);"
+      },
+      "features": [
+        "Auto-detects BitAI browser",
+        "Browser integration (window.bitai)",
+        "Event listeners",
+        "Full TypeScript types",
+        "9 working examples",
+        "Fluent builder APIs"
+      ],
+      "docs": {
+        "quickStart": "/docs/GETTING_STARTED.md",
+        "apiReference": "/docs/DEVELOPER_DOCS.md",
+        "examples": "/sdks/javascript/examples/",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": [
+        {
+          "title": "Initialize Client",
+          "code": "import { BitAIClient } from 'bitai-sdk';\n\nconst client = new BitAIClient();"
+        },
+        {
+          "title": "Chat with AI",
+          "code": "const response = await client.chat({\n  message: 'What is Ethereum?',\n  userId: 'user123',\n  walletAddress: '0x...'\n});\n\nif (response.success) {\n  console.log('AI:', response.data.message);\n}"
+        },
+        {
+          "title": "Execute with Natural Language",
+          "code": "const result = await client.executeWithAI(\n  'swap 100 USDC for ETH',\n  'user123',\n  '0x...',\n  1\n);\n\nif (result.success) {\n  console.log('TX:', result.data.transactionHash);\n}"
+        },
+        {
+          "title": "List dApps",
+          "code": "const dapps = await client.listDApps(1, 20, 'defi');\n\nif (dapps.success) {\n  dapps.data.forEach(dapp => {\n    console.log(dapp.name);\n  });\n}"
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "icon": "🐍",
+      "official": true,
+      "tier": 1,
+      "popularity": 25,
+      "rating": 5,
+      "bestFor": ["Django", "Flask", "FastAPI", "Backend services", "Data science"],
+      "install": {
+        "command": "pip install bitai-sdk",
+        "package": "bitai-sdk",
+        "manager": "pip"
+      },
+      "quickStart": {
+        "import": "from bitai import BitAIClient",
+        "initialize": "client = BitAIClient(base_url='http://localhost:3000/api')",
+        "example": "response = client.chat({\n    'message': 'What is DeFi?',\n    'userId': 'user123',\n    'walletAddress': '0x...'\n})\n\nprint(f\"AI: {response['data']['message']}\")"
+      },
+      "features": [
+        "Clean Pythonic API",
+        "Type hints included",
+        "Flask/Django integration",
+        "pip installable",
+        "Docker support",
+        "Simple error handling"
+      ],
+      "docs": {
+        "quickStart": "/sdks/python/README.md",
+        "apiReference": "/sdks/python/README.md#api-reference",
+        "examples": "/sdks/python/examples/",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": [
+        {
+          "title": "Initialize Client",
+          "code": "from bitai import BitAIClient\n\nclient = BitAIClient(base_url='http://localhost:3000/api')"
+        },
+        {
+          "title": "Authenticate",
+          "code": "nonce = client.get_wallet_nonce('0x...')\nsignature = sign_message(nonce['data']['nonce'])\n\nauth = client.authenticate('0x...', signature)\nif auth['success']:\n    print('✅ Authenticated!')"
+        },
+        {
+          "title": "Chat with AI",
+          "code": "response = client.chat({\n    'message': 'What is Ethereum?',\n    'userId': 'user123',\n    'walletAddress': '0x...'\n})\n\nif response['success']:\n    print(f\"AI: {response['data']['message']}\")"
+        },
+        {
+          "title": "List dApps",
+          "code": "dapps = client.list_dapps(page=1, limit=20, category='defi')\n\nfor dapp in dapps['data']:\n    print(f\"- {dapp['name']}\")"
+        }
+      ]
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "icon": "🔷",
+      "official": true,
+      "tier": 1,
+      "popularity": 15,
+      "rating": 5,
+      "bestFor": ["Backend services", "Microservices", "CLI tools", "High performance"],
+      "install": {
+        "command": "go get github.com/bitai/sdk/bitai",
+        "package": "github.com/bitai/sdk/bitai",
+        "manager": "go get"
+      },
+      "quickStart": {
+        "import": "import \"github.com/bitai/sdk/bitai\"",
+        "initialize": "client := bitai.NewClient(bitai.Config{\n    BaseURL: \"http://localhost:3000/api\",\n})",
+        "example": "chatResp, err := client.Chat(bitai.AIChatRequest{\n    Message:       \"What is DeFi?\",\n    UserID:        \"user123\",\n    WalletAddress: \"0x...\",\n})\n\nif err == nil && chatResp.Success {\n    fmt.Printf(\"AI: %s\\n\", chatResp.Data.Message)\n}"
+      },
+      "features": [
+        "Type-safe structs",
+        "Idiomatic Go API",
+        "High performance",
+        "Concurrent support",
+        "Docker support",
+        "go mod compatible"
+      ],
+      "docs": {
+        "quickStart": "/sdks/go/README.md",
+        "apiReference": "/sdks/go/README.md#api-reference",
+        "examples": "/sdks/go/examples/",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": [
+        {
+          "title": "Initialize Client",
+          "code": "import \"github.com/bitai/sdk/bitai\"\n\nclient := bitai.NewClient(bitai.Config{\n    BaseURL: \"http://localhost:3000/api\",\n})"
+        },
+        {
+          "title": "Authenticate",
+          "code": "nonceResp, err := client.GetWalletNonce(\"0x...\")\nnonce := nonceResp.Data[\"nonce\"].(string)\n\nauthResp, err := client.Authenticate(\"0x...\", signature)\nif err == nil && authResp.Success {\n    fmt.Println(\"✅ Authenticated!\")\n}"
+        },
+        {
+          "title": "Chat with AI",
+          "code": "chatResp, err := client.Chat(bitai.AIChatRequest{\n    Message:       \"What is Ethereum?\",\n    UserID:        \"user123\",\n    WalletAddress: \"0x...\",\n})\n\nif err == nil && chatResp.Success {\n    fmt.Println(\"AI:\", chatResp.Data.Message)\n}"
+        },
+        {
+          "title": "List dApps",
+          "code": "dappsResp, err := client.ListDApps(1, 20, \"defi\")\n\nif err == nil && dappsResp.Success {\n    for _, dapp := range dappsResp.Data {\n        fmt.Printf(\"- %s\\n\", dapp.Name)\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "java",
+      "name": "Java",
+      "icon": "☕",
+      "official": false,
+      "tier": 2,
+      "popularity": 5,
+      "rating": 4,
+      "bestFor": ["Enterprise apps", "Spring Boot", "Android"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g java",
+        "package": "Generated",
+        "manager": "Maven/Gradle"
+      },
+      "quickStart": {
+        "import": "import com.bitai.client.*;",
+        "initialize": "ApiClient client = new ApiClient();\nclient.setBasePath(\"http://localhost:3000/api\");",
+        "example": "AuthenticationApi authApi = new AuthenticationApi(client);\nDappsApi dappsApi = new DappsApi(client);\n\nDAppsResponse dapps = dappsApi.listDApps(1, 20, \"defi\");"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "Maven/Gradle compatible",
+        "Spring Boot integration",
+        "Complete API coverage"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#java",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "csharp",
+      "name": "C# / .NET",
+      "icon": "🔷",
+      "official": false,
+      "tier": 2,
+      "popularity": 5,
+      "rating": 4,
+      "bestFor": [".NET Core", "ASP.NET", "Unity", "Windows apps"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g csharp",
+        "package": "Generated",
+        "manager": "NuGet"
+      },
+      "quickStart": {
+        "import": "using BitAI.SDK.Api;",
+        "initialize": "var config = new Configuration { BasePath = \"http://localhost:3000/api\" };",
+        "example": "var dappsApi = new DappsApi(config);\nvar dapps = dappsApi.ListDApps(1, 20, \"defi\");"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "NuGet package",
+        ".NET Standard compatible",
+        "Azure integration"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#c--net",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby",
+      "icon": "💎",
+      "official": false,
+      "tier": 2,
+      "popularity": 3,
+      "rating": 4,
+      "bestFor": ["Rails", "API servers", "Scripting"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g ruby",
+        "package": "Generated",
+        "manager": "gem"
+      },
+      "quickStart": {
+        "import": "require 'bitai'",
+        "initialize": "BitAI.configure do |config|\n  config.host = 'localhost:3000/api'\nend",
+        "example": "auth_api = BitAI::AuthenticationApi.new\nnonce = auth_api.get_wallet_nonce(wallet_address: '0x...')"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "Gem package",
+        "Rails integration",
+        "Ruby-friendly API"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#ruby",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "icon": "🐘",
+      "official": false,
+      "tier": 2,
+      "popularity": 3,
+      "rating": 4,
+      "bestFor": ["Laravel", "Symfony", "WordPress"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g php",
+        "package": "Generated",
+        "manager": "composer"
+      },
+      "quickStart": {
+        "import": "use BitAI\\Api\\AuthenticationApi;",
+        "initialize": "$config = BitAI\\Configuration::getDefaultConfiguration()\n    ->setHost('http://localhost:3000/api');",
+        "example": "$authApi = new AuthenticationApi(new GuzzleHttp\\Client(), $config);\n$nonce = $authApi->getWalletNonce('0x...');"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "Composer package",
+        "PSR-4 compatible",
+        "Framework integration"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#php",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "icon": "🦀",
+      "official": false,
+      "tier": 2,
+      "popularity": 4,
+      "rating": 4,
+      "bestFor": ["High performance", "Blockchain infra", "Systems programming"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g rust",
+        "package": "Generated",
+        "manager": "cargo"
+      },
+      "quickStart": {
+        "import": "use bitai_api::apis::configuration::Configuration;",
+        "initialize": "let mut config = Configuration::new();\nconfig.base_path = \"http://localhost:3000/api\".to_owned();",
+        "example": "use bitai_api::apis::authentication_api;\n\nlet nonce = authentication_api::get_wallet_nonce(&config, \"0x...\").await?;"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "Cargo package",
+        "Async/await support",
+        "Type-safe"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#rust",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "swift",
+      "name": "Swift",
+      "icon": "🍎",
+      "official": false,
+      "tier": 2,
+      "popularity": 3,
+      "rating": 4,
+      "bestFor": ["iOS", "macOS", "Apple ecosystem"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g swift5",
+        "package": "Generated",
+        "manager": "Swift Package Manager"
+      },
+      "quickStart": {
+        "import": "import BitAIAPI",
+        "initialize": "BitAIAPI.basePath = \"http://localhost:3000/api\"",
+        "example": "AuthenticationAPI.getWalletNonce(walletAddress: \"0x...\") { response, error in\n    if let nonce = response?.data?.nonce {\n        print(\"Nonce: \\(nonce)\")\n    }\n}"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "SPM compatible",
+        "iOS/macOS support",
+        "SwiftUI integration"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#swift--ios",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    },
+    {
+      "id": "kotlin",
+      "name": "Kotlin",
+      "icon": "🤖",
+      "official": false,
+      "tier": 2,
+      "popularity": 3,
+      "rating": 4,
+      "bestFor": ["Android", "Mobile apps", "Backend"],
+      "install": {
+        "command": "openapi-generator-cli generate -i openapi/bitai-api.yaml -g kotlin",
+        "package": "Generated",
+        "manager": "Gradle"
+      },
+      "quickStart": {
+        "import": "import com.bitai.client.apis.*",
+        "initialize": "ApiClient.baseUrl = \"http://localhost:3000/api\"",
+        "example": "val authApi = AuthenticationApi()\nval nonce = authApi.getWalletNonce(\"0x...\")\nprintln(\"Nonce: ${nonce.data.nonce}\")"
+      },
+      "features": [
+        "Auto-generated from OpenAPI",
+        "Gradle compatible",
+        "Coroutines support",
+        "Android-ready"
+      ],
+      "docs": {
+        "quickStart": "/sdks/openapi/README.md#kotlin--android",
+        "apiReference": "/sdks/openapi/bitai-api.yaml",
+        "examples": "/sdks/openapi/README.md",
+        "github": "https://github.com/bitai/sdk"
+      },
+      "codeExamples": []
+    }
+  ],
+  "commonFeatures": {
+    "all": [
+      "Wallet signature authentication",
+      "AI chat integration",
+      "Natural language execution",
+      "27 pre-integrated dApps",
+      "Solana ecosystem support",
+      "Portfolio tracking",
+      "Error handling"
+    ],
+    "official": [
+      "Hand-crafted code",
+      "Best developer experience",
+      "More examples",
+      "Better documentation",
+      "Premium support"
+    ],
+    "generated": [
+      "Quick setup",
+      "Auto-updated from spec",
+      "Good quality",
+      "Works immediately"
+    ]
+  },
+  "apiEndpoints": [
+    {
+      "category": "Authentication",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/auth/wallet/nonce",
+          "description": "Get nonce for wallet signature",
+          "auth": false
+        },
+        {
+          "method": "POST",
+          "path": "/auth/wallet/verify",
+          "description": "Verify signature and authenticate",
+          "auth": false
+        }
+      ]
+    },
+    {
+      "category": "AI",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/ai/chat",
+          "description": "Chat with AI",
+          "auth": true
+        },
+        {
+          "method": "POST",
+          "path": "/ai/agent/execute",
+          "description": "Execute with natural language",
+          "auth": true
+        }
+      ]
+    },
+    {
+      "category": "dApps",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/dapps",
+          "description": "List all dApps",
+          "auth": false
+        },
+        {
+          "method": "GET",
+          "path": "/dapps/:id",
+          "description": "Get dApp details",
+          "auth": false
+        },
+        {
+          "method": "POST",
+          "path": "/dapps/execute",
+          "description": "Execute dApp action",
+          "auth": true
+        },
+        {
+          "method": "POST",
+          "path": "/dapps/simulate",
+          "description": "Simulate dApp action",
+          "auth": true
+        }
+      ]
+    },
+    {
+      "category": "Wallet",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/v1/wallet/connect",
+          "description": "Connect wallet",
+          "auth": true
+        },
+        {
+          "method": "GET",
+          "path": "/v1/wallet",
+          "description": "Get user wallets",
+          "auth": true
+        }
+      ]
+    },
+    {
+      "category": "Portfolio",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/portfolio/overview",
+          "description": "Get portfolio overview",
+          "auth": true
+        },
+        {
+          "method": "GET",
+          "path": "/portfolio/assets",
+          "description": "Get portfolio assets",
+          "auth": true
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "languagesSupported": 50,
+    "officialSDKs": 3,
+    "codeFiles": 26,
+    "documentationFiles": 24,
+    "examples": 11,
+    "dockerConfigs": 6,
+    "linesOfCode": 2500,
+    "documentationWords": 20000
+  }
+}
+

@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # Frontend React App with AI Integration
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      # External Backend API Configuration (point to your separate backend)
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8080/api/v1}
+      - REACT_APP_AUTH_URL=${REACT_APP_AUTH_URL:-http://localhost:8080/api/auth}
+      - REACT_APP_WS_URL=${REACT_APP_WS_URL:-ws://localhost:8080}
+      # Web3 Configuration - Solana Only
+      - REACT_APP_DEFAULT_CHAIN_ID=101
+      - REACT_APP_SUPPORTED_CHAINS=101,103,102
+      # Feature Flags
+      - REACT_APP_ENABLE_AI_CHAT=true
+      - REACT_APP_ENABLE_DAPP_STORE=true
+      - REACT_APP_ENABLE_PORTFOLIO=true
+      - REACT_APP_ENVIRONMENT=development
+      - REACT_APP_DEBUG=true
+      - REACT_APP_USE_REAL_API=true
+      # AI Provider Configuration (Client-side API keys)
+      - REACT_APP_HUGGINGFACE_API_URL=https://api-inference.huggingface.co
+      - REACT_APP_HUGGINGFACE_API_KEY=${REACT_APP_HUGGINGFACE_API_KEY}
+      - REACT_APP_GEMINI_API_URL=https://generativelanguage.googleapis.com
+      - REACT_APP_GEMINI_API_KEY=${REACT_APP_GEMINI_API_KEY}
+      - REACT_APP_COHERE_API_URL=https://api.cohere.ai
+      - REACT_APP_COHERE_API_KEY=${REACT_APP_COHERE_API_KEY}
+      - REACT_APP_CLAUDE_API_URL=https://api.anthropic.com
+      - REACT_APP_CLAUDE_API_KEY=${REACT_APP_CLAUDE_API_KEY}
+      # Development Server Configuration
+      - WDS_SOCKET_HOST=localhost
+      - WDS_SOCKET_PORT=3001
+    volumes:
+      - ..:/app
+      - /app/node_modules
+    networks:
+      - bitai-network
+
+  # AI Model Serving (Optional - for local AI models)
+  ai-model-server:
+    image: huggingface/text-generation-inference:latest
+    ports:
+      - "8080:80"
+    environment:
+      - MODEL_ID=microsoft/DialoGPT-medium
+      - MAX_INPUT_LENGTH=1024
+      - MAX_TOTAL_TOKENS=2048
+    volumes:
+      - ai_models:/data
+    networks:
+      - bitai-network
+    profiles:
+      - ai-local
+
+  # Vector Database for AI embeddings (Optional)
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - bitai-network
+    profiles:
+      - ai-advanced
+
+  # Monitoring and Logging (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - bitai-network
+    profiles:
+      - monitoring
+
+  # Grafana Dashboard (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3002:3000"  # Changed port to avoid conflict with frontend
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - bitai-network
+    profiles:
+      - monitoring
+
+volumes:
+  ai_models:
+  qdrant_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  bitai-network:
+    driver: bridge

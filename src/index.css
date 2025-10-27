@@ -1,0 +1,1308 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-white text-gray-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Cyberpunk Theme Variables */
+:root {
+  --cyber-primary-blue: #00b8ff;
+  --cyber-primary-purple: #bd00ff;
+  --cyber-accent-yellow: #FCEE0C;
+  --cyber-accent-red: #fb0a26;
+  --cyber-accent-green: #00ff9f;
+  --cyber-dark-bg: #0a0a0a;
+  --cyber-dark-surface: #1a1a1a;
+  --cyber-neon-glow: 0 0 20px;
+  --cyber-border: 1px solid rgba(0, 184, 255, 0.3);
+}
+
+/* Cyberpunk Theme Styles */
+.cyberpunk-theme {
+  --tw-bg-opacity: 1;
+  background-color: var(--cyber-dark-bg);
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.cyberpunk-theme::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(0, 184, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(189, 0, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(252, 238, 12, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 60% 60%, rgba(0, 255, 159, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, var(--cyber-dark-bg) 0%, #0f0f0f 50%, var(--cyber-dark-bg) 100%);
+  z-index: -2;
+  pointer-events: none;
+}
+
+.cyberpunk-theme::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 184, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 184, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(0, 255, 159, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 159, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px, 50px 50px, 25px 25px, 25px 25px;
+  animation: cyberpunkGridMove 20s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes cyberpunkGridMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+/* Cyberpunk Typography */
+.cyberpunk-theme .cyberpunk-font {
+  font-family: 'Orbitron', monospace;
+}
+
+.cyberpunk-theme .cyberpunk-text-glow {
+  text-shadow: 0 0 20px var(--cyber-primary-blue);
+}
+
+.cyberpunk-theme .cyberpunk-gradient-text {
+  background: linear-gradient(135deg, var(--cyber-accent-yellow) 0%, var(--cyber-accent-green) 25%, var(--cyber-primary-blue) 50%, var(--cyber-primary-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cyberpunk-theme .cyberpunk-gradient-bg {
+  background: linear-gradient(135deg, var(--cyber-primary-blue) 0%, var(--cyber-primary-purple) 100%);
+  box-shadow: 0 0 20px rgba(0, 184, 255, 0.5);
+}
+
+/* Cyberpunk Animations */
+@keyframes cyberpunkPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    opacity: 0.8; 
+    filter: drop-shadow(0 0 10px var(--cyber-primary-blue));
+  }
+  50% { 
+    transform: scale(1.05); 
+    opacity: 1; 
+    filter: drop-shadow(0 0 20px var(--cyber-primary-purple));
+  }
+}
+
+@keyframes cyberpunkShimmer {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+@keyframes cyberpunkGlow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 10px var(--cyber-primary-blue));
+    box-shadow: 0 0 20px rgba(0, 184, 255, 0.3);
+  }
+  50% { 
+    filter: drop-shadow(0 0 20px var(--cyber-accent-yellow));
+    box-shadow: 0 0 30px rgba(252, 238, 12, 0.5);
+  }
+}
+
+@keyframes cyberpunkFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes cyberpunkScan {
+  0% { transform: translateX(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes cyberpunkGlitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes cyberpunkFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.9; }
+}
+
+/* Cyberpunk Components */
+.cyberpunk-theme .cyberpunk-card {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 184, 255, 0.3);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  animation: cyberpunkFloat 6s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-card:hover {
+  background: rgba(0, 184, 255, 0.1);
+  border-color: var(--cyber-accent-yellow);
+  box-shadow: 
+    0 20px 40px rgba(0, 184, 255, 0.2),
+    0 0 30px rgba(0, 184, 255, 0.1);
+  transform: translateY(-5px);
+  animation: cyberpunkGlow 2s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-button {
+  background: linear-gradient(135deg, var(--cyber-primary-blue) 0%, var(--cyber-primary-purple) 100%);
+  color: white;
+  border: 1px solid rgba(0, 184, 255, 0.5);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: cyberpunkFlicker 3s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.cyberpunk-theme .cyberpunk-button:hover::before {
+  left: 100%;
+}
+
+.cyberpunk-theme .cyberpunk-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 10px 30px rgba(0, 184, 255, 0.4),
+    0 0 20px var(--cyber-primary-blue);
+  animation: cyberpunkPulse 1s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(0, 184, 255, 0.3);
+  border-radius: 12px;
+  color: white;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-theme .cyberpunk-input:focus {
+  outline: none;
+  border-color: var(--cyber-accent-yellow);
+  background: rgba(0, 184, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 184, 255, 0.3);
+}
+
+.cyberpunk-theme .cyberpunk-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Cyberpunk Message Styles */
+.cyberpunk-theme .cyberpunk-message-user {
+  background: rgba(0, 184, 255, 0.1);
+  border: 1px solid rgba(0, 184, 255, 0.5);
+  color: #ffffff !important;
+  border-radius: 16px;
+  box-shadow: 0 0 15px rgba(0, 184, 255, 0.2);
+  animation: cyberpunkFloat 4s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-message-assistant {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 159, 0.3);
+  color: #ffffff !important;
+  border-radius: 16px;
+  box-shadow: 0 0 15px rgba(0, 255, 159, 0.1);
+  animation: cyberpunkFloat 5s ease-in-out infinite;
+}
+
+/* Comprehensive cyberpunk text overrides - ensure text is white on dark backgrounds */
+.cyberpunk-theme {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme body {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme h1,
+.cyberpunk-theme h2,
+.cyberpunk-theme h3,
+.cyberpunk-theme h4,
+.cyberpunk-theme h5,
+.cyberpunk-theme h6 {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+.cyberpunk-theme p,
+.cyberpunk-theme span,
+.cyberpunk-theme div,
+.cyberpunk-theme label,
+.cyberpunk-theme small,
+.cyberpunk-theme strong,
+.cyberpunk-theme em,
+.cyberpunk-theme b,
+.cyberpunk-theme i {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme a {
+  color: #22c55e !important;
+}
+
+.cyberpunk-theme a:hover {
+  color: #16a34a !important;
+}
+
+/* Override Tailwind text color classes - but allow theme cards to override */
+.cyberpunk-theme .text-secondary-900,
+.cyberpunk-theme .text-secondary-800,
+.cyberpunk-theme .text-secondary-700,
+.cyberpunk-theme .text-secondary-600,
+.cyberpunk-theme .text-secondary-500,
+.cyberpunk-theme .text-secondary-400,
+.cyberpunk-theme .text-secondary-300,
+.cyberpunk-theme .text-secondary-200,
+.cyberpunk-theme .text-secondary-100 {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .text-gray-900,
+.cyberpunk-theme .text-gray-800,
+.cyberpunk-theme .text-gray-700,
+.cyberpunk-theme .text-gray-600,
+.cyberpunk-theme .text-gray-500,
+.cyberpunk-theme .text-gray-400,
+.cyberpunk-theme .text-gray-300,
+.cyberpunk-theme .text-gray-200,
+.cyberpunk-theme .text-gray-100 {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .text-primary-900,
+.cyberpunk-theme .text-primary-800,
+.cyberpunk-theme .text-primary-700,
+.cyberpunk-theme .text-primary-600,
+.cyberpunk-theme .text-primary-500,
+.cyberpunk-theme .text-primary-400,
+.cyberpunk-theme .text-primary-300,
+.cyberpunk-theme .text-primary-200,
+.cyberpunk-theme .text-primary-100 {
+  color: #ffffff !important;
+}
+
+/* Allow black text to remain black for theme cards */
+.cyberpunk-theme .text-black {
+  color: #000000 !important;
+}
+
+.cyberpunk-theme .text-slate-900,
+.cyberpunk-theme .text-slate-800,
+.cyberpunk-theme .text-slate-700,
+.cyberpunk-theme .text-slate-600,
+.cyberpunk-theme .text-slate-500,
+.cyberpunk-theme .text-slate-400,
+.cyberpunk-theme .text-slate-300,
+.cyberpunk-theme .text-slate-200,
+.cyberpunk-theme .text-slate-100 {
+  color: #ffffff !important;
+}
+
+/* Override form elements */
+.cyberpunk-theme input,
+.cyberpunk-theme textarea,
+.cyberpunk-theme select {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme input::placeholder,
+.cyberpunk-theme textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Override button text */
+.cyberpunk-theme button {
+  color: #ffffff !important;
+}
+
+/* Override link text */
+.cyberpunk-theme .link {
+  color: #22c55e !important;
+}
+
+/* Override specific text classes but allow theme cards to override */
+.cyberpunk-theme [class*="text-"]:not(.text-black):not([class*="bg-"]) {
+  color: #ffffff !important;
+}
+
+/* Additional comprehensive text overrides for cyberpunk theme */
+.cyberpunk-theme .placeholder-secondary-400,
+.cyberpunk-theme .placeholder-secondary-500,
+.cyberpunk-theme .placeholder-gray-400,
+.cyberpunk-theme .placeholder-gray-500 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Search bar and input styling */
+.cyberpunk-theme input[type="text"],
+.cyberpunk-theme input[type="search"],
+.cyberpunk-theme textarea {
+  background: rgba(0, 0, 0, 0.5) !important;
+  border: 2px solid rgba(0, 184, 255, 0.3) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(10px);
+}
+
+.cyberpunk-theme input[type="text"]:focus,
+.cyberpunk-theme input[type="search"]:focus,
+.cyberpunk-theme textarea:focus {
+  border-color: var(--cyber-accent-yellow) !important;
+  background: rgba(0, 184, 255, 0.1) !important;
+  box-shadow: 0 0 20px rgba(0, 184, 255, 0.3) !important;
+}
+
+/* Header and navigation text */
+.cyberpunk-theme header,
+.cyberpunk-theme nav,
+.cyberpunk-theme .header,
+.cyberpunk-theme .navbar {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 184, 255, 0.3) !important;
+}
+
+/* Sidebar text */
+.cyberpunk-theme .sidebar,
+.cyberpunk-theme .sidebar-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 184, 255, 0.3) !important;
+}
+
+/* Footer text */
+.cyberpunk-theme footer,
+.cyberpunk-theme .footer {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 184, 255, 0.3) !important;
+}
+
+/* Cyberpunk Icon Container Overrides */
+.cyberpunk-theme .blue-purple-icon-gradient {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+}
+
+.cyberpunk-theme .blue-purple-icon-gradient svg {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .blue-purple-logo-gradient {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+}
+
+.cyberpunk-theme .blue-purple-logo-gradient svg {
+  color: #ffffff !important;
+}
+
+/* Ensure all icons in cards and containers are visible */
+.cyberpunk-theme .card svg,
+.cyberpunk-theme .cyberpunk-card svg {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .sidebar-container svg {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .header svg {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .footer svg {
+  color: #ffffff !important;
+}
+
+/* Cyberpunk Icon Overrides */
+.cyberpunk-theme svg {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .lucide {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme [data-lucide] {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .icon {
+  color: #ffffff !important;
+}
+
+/* Specific icon color overrides for cyberpunk theme */
+.cyberpunk-theme .text-primary-600 {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .text-secondary-600 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.cyberpunk-theme .text-secondary-400 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.cyberpunk-theme .text-gray-600 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.cyberpunk-theme .text-gray-500 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.cyberpunk-theme .text-gray-400 {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Additional icon visibility fixes */
+.cyberpunk-theme .text-success-600,
+.cyberpunk-theme .text-success-500,
+.cyberpunk-theme .text-success-400 {
+  color: #22c55e !important;
+}
+
+.cyberpunk-theme .text-error-600,
+.cyberpunk-theme .text-error-500,
+.cyberpunk-theme .text-error-400 {
+  color: #ef4444 !important;
+}
+
+.cyberpunk-theme .text-warning-600,
+.cyberpunk-theme .text-warning-500,
+.cyberpunk-theme .text-warning-400 {
+  color: #f59e0b !important;
+}
+
+/* Specific icon color overrides for cyberpunk theme */
+.cyberpunk-theme .text-primary-600 {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .text-secondary-600 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.cyberpunk-theme .text-secondary-400 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.cyberpunk-theme .text-gray-600 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.cyberpunk-theme .text-gray-500 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.cyberpunk-theme .text-gray-400 {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Cyberpunk Button Overrides */
+.cyberpunk-theme .btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  color: white !important;
+  border: 1px solid rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.cyberpunk-theme .btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  border-color: rgba(59, 130, 246, 0.7) !important;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.5) !important;
+  transform: translateY(-2px) !important;
+}
+
+.cyberpunk-theme .btn:active {
+  transform: translateY(0) !important;
+}
+
+/* Override specific button variants in cyberpunk theme */
+.cyberpunk-theme .btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  color: white !important;
+  border: 1px solid rgba(59, 130, 246, 0.5) !important;
+}
+
+.cyberpunk-theme .btn-secondary {
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+}
+
+.cyberpunk-theme .btn-outline {
+  background: transparent !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+}
+
+.cyberpunk-theme .btn-ghost {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Additional background and card fixes */
+.cyberpunk-theme .bg-white {
+  background: var(--cyber-dark-surface) !important;
+}
+
+.cyberpunk-theme .bg-gray-50,
+.cyberpunk-theme .bg-gray-100 {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.cyberpunk-theme .bg-primary-50,
+.cyberpunk-theme .bg-primary-100 {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.cyberpunk-theme .bg-success-50,
+.cyberpunk-theme .bg-success-100 {
+  background: rgba(34, 197, 94, 0.1) !important;
+}
+
+.cyberpunk-theme .bg-secondary-50,
+.cyberpunk-theme .bg-secondary-100 {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.cyberpunk-theme .cyberpunk-message-user:hover {
+  animation: cyberpunkGlow 2s ease-in-out infinite;
+}
+
+.cyberpunk-theme .cyberpunk-message-assistant:hover {
+  animation: cyberpunkGlow 2s ease-in-out infinite;
+}
+
+/* Cyberpunk Scrollbar */
+.cyberpunk-theme ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cyberpunk-theme ::-webkit-scrollbar-track {
+  background: var(--cyber-dark-bg);
+}
+
+.cyberpunk-theme ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--cyber-primary-blue), var(--cyber-accent-green), var(--cyber-primary-purple));
+  border-radius: 4px;
+}
+
+.cyberpunk-theme ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--cyber-accent-green), var(--cyber-accent-yellow), var(--cyber-primary-blue));
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-100 text-secondary-900 hover:bg-secondary-200 active:bg-secondary-300;
+  }
+  
+  .btn-outline {
+    @apply border border-secondary-300 bg-transparent hover:bg-secondary-50 active:bg-secondary-100;
+  }
+  
+  .btn-ghost {
+    @apply hover:bg-secondary-100 hover:text-secondary-900 active:bg-secondary-200;
+  }
+  
+  .btn-sm {
+    @apply h-8 px-3 text-xs;
+  }
+  
+  .btn-md {
+    @apply h-10 px-4 py-2;
+  }
+  
+  .btn-lg {
+    @apply h-12 px-6 text-base;
+  }
+  
+  .card {
+    @apply rounded-lg border border-secondary-200 bg-white shadow-sm;
+  }
+  
+  .card-header {
+    @apply flex flex-col space-y-1.5 p-6;
+  }
+  
+  .card-content {
+    @apply p-6 pt-0;
+  }
+  
+  .card-footer {
+    @apply flex items-center p-6 pt-0;
+  }
+  
+  .input {
+    @apply flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-secondary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .textarea {
+    @apply flex min-h-[80px] w-full rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm placeholder:text-secondary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+  
+  .badge {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+  
+  .badge-default {
+    @apply border-transparent bg-secondary-100 text-secondary-900 hover:bg-secondary-200;
+  }
+  
+  .badge-primary {
+    @apply border-transparent bg-primary-600 text-white hover:bg-primary-700;
+  }
+  
+  .badge-success {
+    @apply border-transparent bg-success-100 text-success-800 hover:bg-success-200;
+  }
+  
+  .badge-warning {
+    @apply border-transparent bg-warning-100 text-warning-800 hover:bg-warning-200;
+  }
+  
+  .badge-error {
+    @apply border-transparent bg-error-100 text-error-800 hover:bg-error-200;
+  }
+  
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary-50 via-white to-accent-50;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/80 border border-white/20;
+  }
+  
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15), 0 0 40px rgba(168, 85, 247, 0.1);
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent;
+  }
+  
+  .blue-purple-gradient-bg {
+    @apply bg-gradient-to-br from-blue-50 via-white to-purple-50;
+  }
+  
+  .blue-purple-hero-gradient {
+    @apply bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600;
+  }
+  
+  .blue-purple-logo-gradient {
+    @apply bg-gradient-to-br from-primary-500 to-accent-500;
+  }
+  
+  .blue-purple-icon-gradient {
+    @apply bg-gradient-to-br from-primary-100 to-accent-100;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Web3 specific styles */
+.wallet-connect-button {
+  @apply px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition-colors;
+}
+
+.dapp-card {
+  @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-200;
+}
+
+.ai-chat-message {
+  @apply max-w-3xl mx-auto p-4 rounded-lg;
+}
+
+.ai-chat-user {
+  @apply bg-blue-50 border border-blue-200 ml-8;
+}
+
+.ai-chat-assistant {
+  @apply bg-gray-50 border border-gray-200 mr-8;
+}
+
+/* Loading states */
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}
+
+/* Theme Card Text Overrides for Cyberpunk Theme */
+.cyberpunk-theme .theme-card h4,
+.cyberpunk-theme .theme-card p {
+  color: #000000 !important;
+}
+
+/* Specific overrides for theme cards in cyberpunk theme */
+.cyberpunk-theme [class*="bg-pink-500"] h4,
+.cyberpunk-theme [class*="bg-pink-500"] p,
+.cyberpunk-theme [class*="bg-green-500"] h4,
+.cyberpunk-theme [class*="bg-green-500"] p,
+.cyberpunk-theme [class*="bg-orange-500"] h4,
+.cyberpunk-theme [class*="bg-orange-500"] p,
+.cyberpunk-theme [class*="bg-yellow-500"] h4,
+.cyberpunk-theme [class*="bg-yellow-500"] p,
+.cyberpunk-theme [class*="bg-purple-500"] h4,
+.cyberpunk-theme [class*="bg-purple-500"] p,
+.cyberpunk-theme [class*="bg-blue-500"] h4,
+.cyberpunk-theme [class*="bg-blue-500"] p,
+.cyberpunk-theme [class*="bg-indigo-500"] h4,
+.cyberpunk-theme [class*="bg-indigo-500"] p,
+.cyberpunk-theme [class*="bg-emerald-500"] h4,
+.cyberpunk-theme [class*="bg-emerald-500"] p,
+.cyberpunk-theme [class*="bg-cyan-500"] h4,
+.cyberpunk-theme [class*="bg-cyan-500"] p,
+.cyberpunk-theme [class*="bg-red-500"] h4,
+.cyberpunk-theme [class*="bg-red-500"] p {
+  color: #000000 !important;
+}
+
+/* Force black text on colored theme card backgrounds */
+.cyberpunk-theme .text-black {
+  color: #000000 !important;
+}
+
+.cyberpunk-theme .text-black\/80 {
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* AGGRESSIVE Theme Card Text Overrides - Multiple Layers */
+/* Layer 1: Target any element inside colored backgrounds */
+.cyberpunk-theme div[class*="bg-pink-500"] *,
+.cyberpunk-theme div[class*="bg-green-500"] *,
+.cyberpunk-theme div[class*="bg-orange-500"] *,
+.cyberpunk-theme div[class*="bg-yellow-500"] *,
+.cyberpunk-theme div[class*="bg-purple-500"] *,
+.cyberpunk-theme div[class*="bg-blue-500"] *,
+.cyberpunk-theme div[class*="bg-indigo-500"] *,
+.cyberpunk-theme div[class*="bg-emerald-500"] *,
+.cyberpunk-theme div[class*="bg-cyan-500"] *,
+.cyberpunk-theme div[class*="bg-red-500"] * {
+  color: #000000 !important;
+}
+
+/* Layer 2: Target specific text elements */
+.cyberpunk-theme div[class*="bg-pink-500"] h4,
+.cyberpunk-theme div[class*="bg-pink-500"] p,
+.cyberpunk-theme div[class*="bg-green-500"] h4,
+.cyberpunk-theme div[class*="bg-green-500"] p,
+.cyberpunk-theme div[class*="bg-orange-500"] h4,
+.cyberpunk-theme div[class*="bg-orange-500"] p,
+.cyberpunk-theme div[class*="bg-yellow-500"] h4,
+.cyberpunk-theme div[class*="bg-yellow-500"] p,
+.cyberpunk-theme div[class*="bg-purple-500"] h4,
+.cyberpunk-theme div[class*="bg-purple-500"] p,
+.cyberpunk-theme div[class*="bg-blue-500"] h4,
+.cyberpunk-theme div[class*="bg-blue-500"] p,
+.cyberpunk-theme div[class*="bg-indigo-500"] h4,
+.cyberpunk-theme div[class*="bg-indigo-500"] p,
+.cyberpunk-theme div[class*="bg-emerald-500"] h4,
+.cyberpunk-theme div[class*="bg-emerald-500"] p,
+.cyberpunk-theme div[class*="bg-cyan-500"] h4,
+.cyberpunk-theme div[class*="bg-cyan-500"] p,
+.cyberpunk-theme div[class*="bg-red-500"] h4,
+.cyberpunk-theme div[class*="bg-red-500"] p {
+  color: #000000 !important;
+}
+
+/* Layer 3: Target by text content */
+.cyberpunk-theme h4:contains("Barbie"),
+.cyberpunk-theme h4:contains("Soccer"),
+.cyberpunk-theme h4:contains("Cricket"),
+.cyberpunk-theme h4:contains("Crypto"),
+.cyberpunk-theme h4:contains("Solana"),
+.cyberpunk-theme h4:contains("Ethereum"),
+.cyberpunk-theme h4:contains("Base"),
+.cyberpunk-theme h4:contains("Nature"),
+.cyberpunk-theme h4:contains("Digital"),
+.cyberpunk-theme h4:contains("Mars"),
+.cyberpunk-theme p:contains("Coming Soon") {
+  color: #000000 !important;
+}
+
+/* Layer 4: Nuclear option - override ALL text in theme cards */
+.cyberpunk-theme .grid.grid-cols-2 h4,
+.cyberpunk-theme .grid.grid-cols-2 p,
+.cyberpunk-theme .grid.grid-cols-3 h4,
+.cyberpunk-theme .grid.grid-cols-3 p,
+.cyberpunk-theme .grid.grid-cols-5 h4,
+.cyberpunk-theme .grid.grid-cols-5 p {
+  color: #000000 !important;
+}
+
+/* Allow white text to remain white for proper contrast */
+.cyberpunk-theme .text-white {
+  color: #ffffff !important;
+}
+
+.cyberpunk-theme .text-white\/80 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.cyberpunk-theme .text-white\/90 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Additional text styling fixes for cyberpunk theme */
+.cyberpunk-theme .text-secondary-900,
+.cyberpunk-theme .text-secondary-800,
+.cyberpunk-theme .text-secondary-700,
+.cyberpunk-theme .text-secondary-600,
+.cyberpunk-theme .text-secondary-500,
+.cyberpunk-theme .text-secondary-400,
+.cyberpunk-theme .text-secondary-300,
+.cyberpunk-theme .text-secondary-200,
+.cyberpunk-theme .text-secondary-100 {
+  color: #ffffff !important;
+}
+
+/* Chat and message text styling */
+.cyberpunk-theme .chat-message,
+.cyberpunk-theme .message,
+.cyberpunk-theme .ai-chat-message,
+.cyberpunk-theme .ai-chat-user,
+.cyberpunk-theme .ai-chat-assistant {
+  color: #ffffff !important;
+}
+
+/* Button text styling */
+.cyberpunk-theme .btn,
+.cyberpunk-theme .button,
+.cyberpunk-theme button {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Link text styling */
+.cyberpunk-theme a,
+.cyberpunk-theme .link,
+.cyberpunk-theme [role="button"] {
+  color: #22c55e !important;
+}
+
+.cyberpunk-theme a:hover,
+.cyberpunk-theme .link:hover,
+.cyberpunk-theme [role="button"]:hover {
+  color: #16a34a !important;
+}
+
+/* Badge and status text styling */
+.cyberpunk-theme .badge,
+.cyberpunk-theme .status,
+.cyberpunk-theme .tag {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Form label text styling */
+.cyberpunk-theme .label,
+.cyberpunk-theme label {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Error and success message text styling */
+.cyberpunk-theme .error,
+.cyberpunk-theme .success,
+.cyberpunk-theme .warning,
+.cyberpunk-theme .info {
+  color: #ffffff !important;
+}
+
+/* Navigation text styling */
+.cyberpunk-theme .nav-link,
+.cyberpunk-theme .navigation,
+.cyberpunk-theme .menu-item {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Card text styling */
+.cyberpunk-theme .card-title,
+.cyberpunk-theme .card-subtitle,
+.cyberpunk-theme .card-text {
+  color: #ffffff !important;
+}
+
+/* Modal and dialog text styling */
+.cyberpunk-theme .modal,
+.cyberpunk-theme .dialog,
+.cyberpunk-theme .popup {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 184, 255, 0.3) !important;
+}
+
+.cyberpunk-theme .modal *,
+.cyberpunk-theme .dialog *,
+.cyberpunk-theme .popup * {
+  color: #ffffff !important;
+}
+
+/* NUCLEAR OPTION: Force ALL text to be white in cyberpunk theme */
+.cyberpunk-theme * {
+  color: #ffffff !important;
+}
+
+/* But allow theme cards to override with black text */
+.cyberpunk-theme div[class*="bg-pink-500"] *,
+.cyberpunk-theme div[class*="bg-green-500"] *,
+.cyberpunk-theme div[class*="bg-orange-500"] *,
+.cyberpunk-theme div[class*="bg-yellow-500"] *,
+.cyberpunk-theme div[class*="bg-purple-500"] *,
+.cyberpunk-theme div[class*="bg-blue-500"] *,
+.cyberpunk-theme div[class*="bg-indigo-500"] *,
+.cyberpunk-theme div[class*="bg-emerald-500"] *,
+.cyberpunk-theme div[class*="bg-cyan-500"] *,
+.cyberpunk-theme div[class*="bg-red-500"] *,
+.cyberpunk-theme .text-black,
+.cyberpunk-theme .text-black\/80 {
+  color: #000000 !important;
+}
+
+/* Allow specific colored text for links and accents */
+.cyberpunk-theme a,
+.cyberpunk-theme .link,
+.cyberpunk-theme .text-green-500,
+.cyberpunk-theme .text-green-600,
+.cyberpunk-theme .text-blue-400,
+.cyberpunk-theme .text-blue-500,
+.cyberpunk-theme .text-purple-400,
+.cyberpunk-theme .text-purple-500 {
+  color: #22c55e !important;
+}
+
+/* Allow yellow text for warnings */
+.cyberpunk-theme .text-yellow-400,
+.cyberpunk-theme .text-yellow-500 {
+  color: #fbbf24 !important;
+}
+
+/* Allow red text for errors */
+.cyberpunk-theme .text-red-400,
+.cyberpunk-theme .text-red-500 {
+  color: #ef4444 !important;
+}
+
+/* SPECIFIC FIXES FOR FOOTER, CHAT, AND CHAT HEADER */
+
+/* Footer specific text fixes */
+.cyberpunk-theme footer h3,
+.cyberpunk-theme .footer h3,
+.cyberpunk-theme footer a,
+.cyberpunk-theme .footer a,
+.cyberpunk-theme footer p,
+.cyberpunk-theme .footer p,
+.cyberpunk-theme footer span,
+.cyberpunk-theme .footer span,
+.cyberpunk-theme footer li,
+.cyberpunk-theme .footer li {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat header specific text fixes */
+.cyberpunk-theme .chat-header h1,
+.cyberpunk-theme .chat-header p,
+.cyberpunk-theme .chat-header span,
+.cyberpunk-theme .chat-header div {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat message specific text fixes */
+.cyberpunk-theme .message,
+.cyberpunk-theme .chat-message,
+.cyberpunk-theme .ai-chat-message,
+.cyberpunk-theme .ai-chat-user,
+.cyberpunk-theme .ai-chat-assistant,
+.cyberpunk-theme .message p,
+.cyberpunk-theme .message span,
+.cyberpunk-theme .message div,
+.cyberpunk-theme .message strong,
+.cyberpunk-theme .message em,
+.cyberpunk-theme .message li {
+  color: #ffffff !important;
+}
+
+/* Chat input area text fixes */
+.cyberpunk-theme .chat-input,
+.cyberpunk-theme .input-area,
+.cyberpunk-theme .chat-input input,
+.cyberpunk-theme .input-area input,
+.cyberpunk-theme .chat-input textarea,
+.cyberpunk-theme .input-area textarea {
+  color: #ffffff !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  border: 2px solid rgba(0, 184, 255, 0.3) !important;
+}
+
+.cyberpunk-theme .chat-input input::placeholder,
+.cyberpunk-theme .input-area input::placeholder,
+.cyberpunk-theme .chat-input textarea::placeholder,
+.cyberpunk-theme .input-area textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Chat button text fixes */
+.cyberpunk-theme .chat-button,
+.cyberpunk-theme .send-button,
+.cyberpunk-theme .chat-button button,
+.cyberpunk-theme .send-button button {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat action buttons text fixes */
+.cyberpunk-theme .action-button,
+.cyberpunk-theme .suggested-action,
+.cyberpunk-theme .action-button button,
+.cyberpunk-theme .suggested-action button {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat timestamp text fixes */
+.cyberpunk-theme .message-timestamp,
+.cyberpunk-theme .chat-timestamp,
+.cyberpunk-theme .timestamp {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat loading text fixes */
+.cyberpunk-theme .loading-message,
+.cyberpunk-theme .chat-loading,
+.cyberpunk-theme .loading-message div,
+.cyberpunk-theme .chat-loading div {
+  color: #ffffff !important;
+}
+
+/* Chat empty state text fixes */
+.cyberpunk-theme .empty-state,
+.cyberpunk-theme .chat-empty,
+.cyberpunk-theme .empty-state h3,
+.cyberpunk-theme .empty-state p,
+.cyberpunk-theme .empty-state button,
+.cyberpunk-theme .chat-empty h3,
+.cyberpunk-theme .chat-empty p,
+.cyberpunk-theme .chat-empty button {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Chat quick actions text fixes */
+.cyberpunk-theme .quick-action,
+.cyberpunk-theme .chat-quick-action,
+.cyberpunk-theme .quick-action button,
+.cyberpunk-theme .chat-quick-action button,
+.cyberpunk-theme .quick-action p,
+.cyberpunk-theme .chat-quick-action p {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Card content text fixes */
+.cyberpunk-theme .card-content,
+.cyberpunk-theme .card-content h1,
+.cyberpunk-theme .card-content h2,
+.cyberpunk-theme .card-content h3,
+.cyberpunk-theme .card-content p,
+.cyberpunk-theme .card-content span,
+.cyberpunk-theme .card-content div {
+  color: #ffffff !important;
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Prose content text fixes (for markdown rendering) */
+.cyberpunk-theme .prose,
+.cyberpunk-theme .prose h1,
+.cyberpunk-theme .prose h2,
+.cyberpunk-theme .prose h3,
+.cyberpunk-theme .prose h4,
+.cyberpunk-theme .prose h5,
+.cyberpunk-theme .prose h6,
+.cyberpunk-theme .prose p,
+.cyberpunk-theme .prose span,
+.cyberpunk-theme .prose div,
+.cyberpunk-theme .prose ul,
+.cyberpunk-theme .prose ol,
+.cyberpunk-theme .prose li,
+.cyberpunk-theme .prose strong,
+.cyberpunk-theme .prose em,
+.cyberpunk-theme .prose code {
+  color: #ffffff !important;
+}
+
+/* ReactMarkdown component text fixes */
+.cyberpunk-theme .react-markdown,
+.cyberpunk-theme .react-markdown h1,
+.cyberpunk-theme .react-markdown h2,
+.cyberpunk-theme .react-markdown h3,
+.cyberpunk-theme .react-markdown h4,
+.cyberpunk-theme .react-markdown h5,
+.cyberpunk-theme .react-markdown h6,
+.cyberpunk-theme .react-markdown p,
+.cyberpunk-theme .react-markdown span,
+.cyberpunk-theme .react-markdown div,
+.cyberpunk-theme .react-markdown ul,
+.cyberpunk-theme .react-markdown ol,
+.cyberpunk-theme .react-markdown li,
+.cyberpunk-theme .react-markdown strong,
+.cyberpunk-theme .react-markdown em,
+.cyberpunk-theme .react-markdown code {
+  color: #ffffff !important;
+}
+
+/* FINAL COMPREHENSIVE OVERRIDE - CATCH ALL REMAINING TEXT ELEMENTS */
+.cyberpunk-theme *:not(.text-black):not(.text-black\/80):not([class*="bg-pink-500"]):not([class*="bg-green-500"]):not([class*="bg-orange-500"]):not([class*="bg-yellow-500"]):not([class*="bg-purple-500"]):not([class*="bg-blue-500"]):not([class*="bg-indigo-500"]):not([class*="bg-emerald-500"]):not([class*="bg-cyan-500"]):not([class*="bg-red-500"]) {
+  color: #ffffff !important;
+}
+
+/* Ensure all text elements use cyberpunk font */
+.cyberpunk-theme h1,
+.cyberpunk-theme h2,
+.cyberpunk-theme h3,
+.cyberpunk-theme h4,
+.cyberpunk-theme h5,
+.cyberpunk-theme h6,
+.cyberpunk-theme button,
+.cyberpunk-theme .btn,
+.cyberpunk-theme .button,
+.cyberpunk-theme label,
+.cyberpunk-theme .label,
+.cyberpunk-theme .badge,
+.cyberpunk-theme .tag,
+.cyberpunk-theme .status {
+  font-family: 'Orbitron', monospace !important;
+}
+
+/* Override any remaining text color classes */
+.cyberpunk-theme [class*="text-"]:not(.text-black):not(.text-black\/80):not([class*="bg-pink-500"]):not([class*="bg-green-500"]):not([class*="bg-orange-500"]):not([class*="bg-yellow-500"]):not([class*="bg-purple-500"]):not([class*="bg-blue-500"]):not([class*="bg-indigo-500"]):not([class*="bg-emerald-500"]):not([class*="bg-cyan-500"]):not([class*="bg-red-500"]) {
+  color: #ffffff !important;
+}
