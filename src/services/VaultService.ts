@@ -1,5 +1,5 @@
 import { PersonalInfo } from '../types';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, API_BASE_URL } from '../config/api';
 
 export interface VaultAPIResponse<T> {
   success: boolean;
@@ -74,7 +74,44 @@ class VaultService {
 
   // Get the current wallet address
   private getWalletAddress(): string | null {
-    return localStorage.getItem('walletAddress');
+    // First check localStorage
+    const walletAddress = localStorage.getItem('walletAddress');
+    
+    if (walletAddress) {
+      return walletAddress;
+    }
+    
+    // If not in localStorage, try to get it from the persisted wallet storage
+    try {
+      const walletStorage = localStorage.getItem('wallet-storage');
+      if (walletStorage) {
+        const walletState = JSON.parse(walletStorage);
+        
+        // Try to get address from main walletInfo
+        if (walletState.state?.walletInfo?.address) {
+          const address = walletState.state.walletInfo.address;
+          // Save it to localStorage for next time
+          localStorage.setItem('walletAddress', address);
+          console.log('💾 Restored wallet address from persisted storage:', address);
+          return address;
+        }
+        
+        // Try to get address from connectedWallets
+        if (walletState.state?.connectedWallets && walletState.state.connectedWallets.length > 0) {
+          const address = walletState.state.connectedWallets[0].address;
+          if (address) {
+            // Save it to localStorage for next time
+            localStorage.setItem('walletAddress', address);
+            console.log('💾 Restored wallet address from connectedWallets:', address);
+            return address;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error reading wallet storage:', error);
+    }
+    
+    return null;
   }
 
   private async handleResponse<T>(response: Response): Promise<VaultAPIResponse<T>> {
@@ -290,15 +327,11 @@ class VaultService {
         };
       }
 
+      // Note: JWT token is optional for local wallet connections
+      // If no token, we'll still attempt to save with wallet-only authentication
+      // The backend should handle wallet-only requests if JWT is not provided
       if (!token) {
-        return {
-          success: false,
-          error: {
-            code: 'AUTH_UNAUTHORIZED',
-            message: 'No authentication token found. Please reconnect your wallet.'
-          },
-          timestamp: new Date().toISOString()
-        };
+        console.log('ℹ️ VaultService: No JWT token found, proceeding with wallet-only authentication');
       }
 
       // Send data in the format expected by backend

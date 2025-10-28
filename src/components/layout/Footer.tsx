@@ -10,8 +10,8 @@ export const Footer: React.FC = () => {
 
   const footerLinks = {
     Browser: [
-      { name: 'Safe Store', href: '/safe-store' },
-      { name: 'Safe Vault', href: '/vault' },
+      { name: 'Bit Store', href: '/safe-store' },
+      { name: 'Bit Vault', href: '/vault' },
       { name: 'AI Chat', href: '/chat' },
       { name: 'Portfolio', href: '/portfolio' },
     ],

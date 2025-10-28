@@ -1,4 +1,4 @@
-import { SafeApp } from '../types';
+import { BitApp } from './BitAppService';
 
 /**
  * AI-Powered dApp Integration Service
@@ -25,12 +25,12 @@ export interface AIIntent {
 }
 
 class AIDAppIntegrationService {
-  private dapps: SafeApp[] = [];
+  private dapps: BitApp[] = [];
 
   /**
    * Load available dApps
    */
-  setDApps(dapps: SafeApp[]) {
+  setDApps(dapps: BitApp[]) {
     this.dapps = dapps;
     console.log('🤖 AI Service: Loaded', dapps.length, 'apps. Sample:', dapps.slice(0, 3).map(d => d.name));
   }
@@ -233,7 +233,7 @@ class AIDAppIntegrationService {
 
     // Detect action type
     let actionType = '';
-    let suggestedDApp: SafeApp | undefined;
+    let suggestedDApp: BitApp | undefined;
 
     if (input.includes('swap') || input.includes('trade') || input.includes('exchange')) {
       actionType = 'swap';
@@ -392,7 +392,7 @@ class AIDAppIntegrationService {
   /**
    * Helper: Find dApp by name (fuzzy match)
    */
-  private findDAppByName(input: string): SafeApp | undefined {
+  private findDAppByName(input: string): BitApp | undefined {
     const normalized = input.toLowerCase();
     
     // Exact match

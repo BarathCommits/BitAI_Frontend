@@ -1,11 +1,11 @@
 /**
- * Safe Apps Service
- * Handles all Safe App operations with backend API
+ * Bit Apps Service
+ * Handles all Bit App operations with backend API
  */
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
 
-export interface SafeApp {
+export interface BitApp {
   id: string;
   name: string;
   description: string;
@@ -32,7 +32,7 @@ export interface SafeApp {
   };
 }
 
-export interface SafeAppAPIResponse<T> {
+export interface BitAppAPIResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
@@ -53,7 +53,7 @@ export interface UploadAppRequest {
   };
 }
 
-class SafeAppService {
+class BitAppService {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('authToken') || localStorage.getItem('jwtToken');
     return {
@@ -62,7 +62,7 @@ class SafeAppService {
     };
   }
 
-  private transformBackendDAppToSafeApp(backendDApp: any): SafeApp {
+  private transformBackendDAppToBitApp(backendDApp: any): BitApp {
     return {
       id: backendDApp.dappId || backendDApp._id || backendDApp.id,
       name: backendDApp.name,
@@ -96,7 +96,7 @@ class SafeAppService {
     return emojiMap[category?.toLowerCase()] || '🔷';
   }
 
-  private async handleResponse<T>(response: Response): Promise<SafeAppAPIResponse<T>> {
+  private async handleResponse<T>(response: Response): Promise<BitAppAPIResponse<T>> {
     try {
       const data = await response.json();
       
@@ -111,9 +111,9 @@ class SafeAppService {
       // Backend returns: { success: true, data: { dapps: [...] } }
       let appsData = data.data?.dapps || data.data?.apps || data.data || data;
       
-      // Transform backend dapp format to frontend SafeApp format
+      // Transform backend dapp format to frontend BitApp format
       if (Array.isArray(appsData)) {
-        appsData = appsData.map((app: any) => this.transformBackendDAppToSafeApp(app));
+        appsData = appsData.map((app: any) => this.transformBackendDAppToBitApp(app));
       }
       
       return { success: true, data: appsData };
@@ -125,8 +125,8 @@ class SafeAppService {
     }
   }
 
-  // Upload a new Safe App
-  async uploadApp(appData: UploadAppRequest): Promise<SafeAppAPIResponse<SafeApp>> {
+  // Upload a new Bit App
+  async uploadApp(appData: UploadAppRequest): Promise<BitAppAPIResponse<BitApp>> {
     try {
       const response = await fetch(`${API_BASE_URL}/dapp/upload`, {
         method: 'POST',
@@ -134,7 +134,7 @@ class SafeAppService {
         body: JSON.stringify(appData),
       });
 
-      return this.handleResponse<SafeApp>(response);
+      return this.handleResponse<BitApp>(response);
     } catch (error) {
       return { 
         success: false, 
@@ -144,8 +144,8 @@ class SafeAppService {
   }
 
   // Get dummy apps for fallback when backend is not available
-  private getDummyApps(category?: string, search?: string): SafeApp[] {
-    const allDummyApps: SafeApp[] = [
+  private getDummyApps(category?: string, search?: string): BitApp[] {
+    const allDummyApps: BitApp[] = [
       // DeFi Apps
       {
         id: 'uniswap-v3',
@@ -416,8 +416,8 @@ class SafeAppService {
 
       // Custom Apps
       {
-        id: 'gnosis-safe',
-        name: 'Gnosis Safe',
+        id: 'gnosis-bit',
+        name: 'Gnosis Bit',
         description: 'Smart wallet infrastructure for secure management of digital assets with multi-signature capabilities.',
         category: 'Custom',
         url: 'https://gnosis-safe.io',
@@ -503,12 +503,12 @@ class SafeAppService {
     return filteredApps;
   }
 
-  // Get all Safe Apps
+  // Get all Bit Apps
   async getAllApps(params?: {
     category?: string;
     search?: string;
     sortBy?: string;
-  }): Promise<SafeAppAPIResponse<SafeApp[]>> {
+  }): Promise<BitAppAPIResponse<BitApp[]>> {
     try {
       const queryParams = new URLSearchParams();
       if (params?.category) queryParams.append('category', params.category);
@@ -523,7 +523,7 @@ class SafeAppService {
 
       // If backend returns data, use it
       if (response.ok) {
-        const result = await this.handleResponse<SafeApp[]>(response);
+        const result = await this.handleResponse<BitApp[]>(response);
         // If we got valid data from backend, return it
         if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
           console.log('✅ Loaded', result.data.length, 'apps from backend');
@@ -550,14 +550,14 @@ class SafeAppService {
   }
 
   // Get user's uploaded apps
-  async getMyApps(): Promise<SafeAppAPIResponse<SafeApp[]>> {
+  async getMyApps(): Promise<BitAppAPIResponse<BitApp[]>> {
     try {
       const response = await fetch(`${API_BASE_URL}/dapp/my-apps`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
 
-      return this.handleResponse<SafeApp[]>(response);
+      return this.handleResponse<BitApp[]>(response);
     } catch (error) {
       return { 
         success: false, 
@@ -567,14 +567,14 @@ class SafeAppService {
   }
 
   // Get app by ID
-  async getAppById(id: string): Promise<SafeAppAPIResponse<SafeApp>> {
+  async getAppById(id: string): Promise<BitAppAPIResponse<BitApp>> {
     try {
       const response = await fetch(`${API_BASE_URL}/dapp/${id}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
 
-      return this.handleResponse<SafeApp>(response);
+      return this.handleResponse<BitApp>(response);
     } catch (error) {
       return { 
         success: false, 
@@ -584,7 +584,7 @@ class SafeAppService {
   }
 
   // Update app
-  async updateApp(id: string, appData: Partial<UploadAppRequest>): Promise<SafeAppAPIResponse<SafeApp>> {
+  async updateApp(id: string, appData: Partial<UploadAppRequest>): Promise<BitAppAPIResponse<BitApp>> {
     try {
       const response = await fetch(`${API_BASE_URL}/dapp/${id}`, {
         method: 'PUT',
@@ -592,7 +592,7 @@ class SafeAppService {
         body: JSON.stringify(appData),
       });
 
-      return this.handleResponse<SafeApp>(response);
+      return this.handleResponse<BitApp>(response);
     } catch (error) {
       return { 
         success: false, 
@@ -602,7 +602,7 @@ class SafeAppService {
   }
 
   // Delete app
-  async deleteApp(id: string): Promise<SafeAppAPIResponse<void>> {
+  async deleteApp(id: string): Promise<BitAppAPIResponse<void>> {
     try {
       const response = await fetch(`${API_BASE_URL}/dapp/${id}`, {
         method: 'DELETE',
@@ -619,4 +619,4 @@ class SafeAppService {
   }
 }
 
-export const safeAppService = new SafeAppService();
+export const bitAppService = new BitAppService();

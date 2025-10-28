@@ -79,6 +79,12 @@ export const useWalletStore = create<WalletState>()(
           error: null,
         });
 
+        // Save wallet address to localStorage for backward compatibility with VaultService
+        if (walletInfo.address) {
+          localStorage.setItem('walletAddress', walletInfo.address);
+          console.log('💾 Wallet address saved to localStorage:', walletInfo.address);
+        }
+
         // Dispatch wallet connected event
         window.dispatchEvent(new CustomEvent('walletConnected', { 
           detail: { address: walletInfo.address } 

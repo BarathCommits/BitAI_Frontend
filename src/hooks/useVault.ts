@@ -72,7 +72,8 @@ export const useVault = (): UseVaultReturn => {
     });
 
     if (!token || !walletAddress) {
-      console.log('❌ No auth token or wallet address found - clearing vault data');
+      console.log('❌ No auth token or wallet address found - cannot load vault data from backend');
+      console.log('⚠️ Requiring wallet authentication to access vault');
       setPersonalInfo([]);
       setStats(null);
       isLoadingRef.current = false;
@@ -107,6 +108,12 @@ export const useVault = (): UseVaultReturn => {
         const errorMessage = typeof infoResponse.error === 'string' ? infoResponse.error : 
                            ((infoResponse.error as any)?.message || 'Failed to load personal information');
         console.log('❌ useVault: Error loading personal info:', errorMessage);
+        
+        // No local storage - require backend authentication
+        if (infoResponse.error && infoResponse.error.code === 'AUTH_UNAUTHORIZED') {
+          console.log('❌ Backend authentication required - no local data fallback');
+          setError('Wallet authentication required. Please reconnect your wallet.');
+        }
         
         // Handle rate limiting errors specifically
         if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests') || errorMessage.includes('RATE_LIMITED')) {
@@ -229,18 +236,6 @@ export const useVault = (): UseVaultReturn => {
   // Add personal information
   const addInfo = useCallback(async (info: Omit<PersonalInfo, 'id' | 'createdAt' | 'isEncrypted'>): Promise<boolean> => {
     console.log('🔄 useVault: Adding info:', info);
-    
-    // Check if this exact info already exists to prevent duplicates
-    const exists = personalInfo.some(item => 
-      item.type === info.type && 
-      item.label === info.label && 
-      JSON.stringify(item.fields) === JSON.stringify(info.fields)
-    );
-    
-    if (exists) {
-      console.log('ℹ️ Info already exists, skipping add');
-      return true; // Consider it successful since it already exists
-    }
 
     setLoading(true);
     setError(null);
@@ -251,12 +246,26 @@ export const useVault = (): UseVaultReturn => {
       console.log('🔄 useVault: Response from addPersonalInfo:', { 
         success: response.success, 
         hasData: !!response.data,
+        data: response.data,
         error: response.error 
       });
       
       if (response.success && response.data) {
         console.log('✅ useVault: Successfully added info, updating state');
-        setPersonalInfo(prev => [...prev, response.data!]);
+        setPersonalInfo(prev => {
+          // Check if this exact info already exists to prevent duplicates
+          const exists = prev.some(item => 
+            (item._id || item.id || item.infoId) === (response.data!._id || response.data!.id || response.data!.infoId)
+          );
+          
+          if (exists) {
+            console.log('ℹ️ Info already exists in state, skipping add');
+            return prev;
+          }
+          
+          return [...prev, response.data!];
+        });
+        
         // Update stats manually instead of refreshing all data
         setStats(prev => prev ? {
           ...prev,
@@ -273,8 +282,31 @@ export const useVault = (): UseVaultReturn => {
         
         return true;
       } else {
-        const errorMessage = typeof response.error === 'string' ? response.error : 
-                           ((response.error as any)?.message || 'Failed to add personal information');
+        // Extract error message from the error object
+        let errorMessage = 'Failed to add personal information';
+        
+        if (response.error) {
+          if (typeof response.error === 'string') {
+            errorMessage = response.error;
+          } else if (response.error.message) {
+            errorMessage = response.error.message;
+          } else if (response.error.code) {
+            errorMessage = `Error (${response.error.code}): ${response.error.message || 'Unknown error'}`;
+          }
+        }
+        
+        console.error('❌ useVault: Failed to add info. Full error:', JSON.stringify(response.error, null, 2));
+        console.error('❌ useVault: Response:', JSON.stringify(response, null, 2));
+        
+        // No local storage fallback - all data must go to backend
+        if (response.error && response.error.code === 'AUTH_UNAUTHORIZED') {
+          console.log('❌ Cannot save to vault - backend authentication required');
+          const authErrorMessage = 'Please authenticate with your wallet to save vault data to the backend.';
+          setError(authErrorMessage);
+          notificationService.error('Authentication Required', authErrorMessage);
+          return false;
+        }
+        
         setError(errorMessage);
         
         // Notify error
@@ -288,7 +320,7 @@ export const useVault = (): UseVaultReturn => {
     } finally {
       setLoading(false);
     }
-  }, [personalInfo]);
+  }, []);
 
   // Update personal information
   const updateInfo = useCallback(async (id: string, info: Partial<PersonalInfo>): Promise<boolean> => {

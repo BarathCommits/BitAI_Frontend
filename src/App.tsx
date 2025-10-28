@@ -12,7 +12,7 @@ import { useTheme } from './hooks/useTheme';
 
 // Code splitting: Lazy load all pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'));
-const SafeStorePage = lazy(() => import('./pages/SafeStorePage'));
+const BitStorePage = lazy(() => import('./pages/BitStorePage'));
 const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
 const VaultPage = lazy(() => import('./pages/VaultPage'));
 const SDKIntegrationPage = lazy(() => import('./pages/SDKIntegrationPage'));
@@ -122,7 +122,7 @@ function App() {
           <Route path="/safe-store" element={
             <ErrorBoundary>
               <Layout>
-                <SafeStorePage />
+                <BitStorePage />
               </Layout>
             </ErrorBoundary>
           } />

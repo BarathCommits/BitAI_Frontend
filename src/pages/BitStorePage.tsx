@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
-import { safeAppService, SafeApp } from '../services/SafeAppService';
+import { bitAppService, BitApp } from '../services/BitAppService';
 import { useBuiltInWallet } from '../hooks/useBuiltInWallet';
 import { useTheme } from '../hooks/useTheme';
 import { 
@@ -25,7 +25,7 @@ const categories = ['All', 'DeFi', 'NFT', 'Gaming', 'Social', 'Custom'];
 const sortOptions = ['Popular', 'Newest', 'Rating', 'Name'];
 const walletFilters = ['All Wallets', 'My Wallet', 'Connected Wallet'];
 
-export const SafeStorePage: React.FC = () => {
+export const BitStorePage: React.FC = () => {
   const { connectedWallets } = useBuiltInWallet();
   const { theme, isCyberpunk } = useTheme();
   
@@ -38,7 +38,7 @@ export const SafeStorePage: React.FC = () => {
     provider: primaryWallet.id,
     chainId: primaryWallet.chainId || 1
   } : null;
-  const [apps, setApps] = useState<SafeApp[]>([]);
+  const [apps, setApps] = useState<BitApp[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedWalletFilter, setSelectedWalletFilter] = useState('All Wallets');
@@ -54,7 +54,7 @@ export const SafeStorePage: React.FC = () => {
   const loadApps = async () => {
     setIsLoading(true);
     try {
-      const result = await safeAppService.getAllApps({
+      const result = await bitAppService.getAllApps({
         category: selectedCategory === 'All' ? undefined : selectedCategory,
         search: searchQuery || undefined,
         sortBy: sortBy === 'Popular' ? 'uploadDate' : sortBy.toLowerCase()
@@ -125,7 +125,7 @@ export const SafeStorePage: React.FC = () => {
     return chainNames[chainId] || `Chain ${chainId}`;
   };
 
-  const handleConnectApp = (app: SafeApp) => {
+  const handleConnectApp = (app: BitApp) => {
     if (!isWalletConnected) {
       toast.error('Please connect your wallet to open dApps');
       return;
@@ -169,7 +169,7 @@ export const SafeStorePage: React.FC = () => {
                   : 'text-secondary-600'
               }`}>
                 {isCyberpunk 
-                  ? 'Discover and deploy secure Safe applications' 
+                  ? 'Discover and deploy secure Bit applications' 
                   : 'Discover and upload secure decentralized applications'}
               </p>
             </div>
@@ -448,4 +448,4 @@ export const SafeStorePage: React.FC = () => {
   );
 };
 
-export default SafeStorePage;
+export default BitStorePage;

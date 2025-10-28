@@ -9,7 +9,7 @@ import { useBuiltInWallet } from '../hooks/useBuiltInWallet';
 import { useAuthStore } from '../store/authStore';
 import { STORAGE_KEYS } from '../constants/storage';
 import { aiDAppIntegration } from '../services/AIDAppIntegrationService';
-import { safeAppService } from '../services/SafeAppService';
+import { bitAppService } from '../services/BitAppService';
 import { solanaAIChatService } from '../services/SolanaAIChatService';
 import { openDApp } from '../utils/tabManager';
 import { Icons } from '../utils/iconUtils';
@@ -103,7 +103,7 @@ export const ChatPage: React.FC = () => {
 
       try {
         console.log('🔄 ChatPage: Loading dApps for AI...');
-        const result = await safeAppService.getAllApps();
+        const result = await bitAppService.getAllApps();
         console.log('📦 ChatPage: Got result:', result.success, 'Apps count:', result.data?.length);
         
         if (result.success && result.data) {

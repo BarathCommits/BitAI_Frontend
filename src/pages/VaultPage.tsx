@@ -175,35 +175,59 @@ export const VaultPage: React.FC = () => {
   ];
 
   const handleAddInfo = async () => {
+    console.log('🔄 handleAddInfo called with newInfo:', newInfo);
+    
     // Check if any fields are filled
     const hasFields = Object.values(newInfo.fields).some(value => value.trim() !== '');
     
-    if (hasFields) {
-      const selectedType = infoTypes.find(t => t.value === newInfo.type);
-      
-      // Generate label from the type
-      const label = selectedType?.label || 'Personal Details';
-      
-      // Generate value from First Name + Last Name or first non-empty field
-      let displayValue = '';
-      if (newInfo.type === 'id_card' && newInfo.fields['First Name'] && newInfo.fields['Last Name']) {
-        displayValue = `${newInfo.fields['First Name']} ${newInfo.fields['Last Name']}`;
-      } else {
-        displayValue = Object.values(newInfo.fields).find(value => value.trim() !== '') || '';
-      }
-      
-      const success = await addInfo({
-        type: newInfo.type,
-        label: label,
-        value: displayValue,
-        category: (selectedType?.category as 'personal' | 'financial' | 'identity' | 'documents') || 'personal',
-        fields: newInfo.fields
-      });
-      
-      if (success) {
-        setNewInfo({ type: 'id_card', label: 'Personal Details', value: '', fields: {} });
-        setIsAddingNew(false);
-      }
+    console.log('🔄 handleAddInfo: Fields check result:', { hasFields, fieldsCount: Object.keys(newInfo.fields).length, fields: newInfo.fields });
+    
+    if (!hasFields) {
+      console.log('❌ handleAddInfo: No fields filled, showing error to user');
+      toast.error('Please fill in at least one field to add information');
+      return;
+    }
+    
+    const selectedType = infoTypes.find(t => t.value === newInfo.type);
+    
+    // Generate label from the type
+    const label = selectedType?.label || 'Personal Details';
+    
+    // Generate value from First Name + Last Name or first non-empty field
+    let displayValue = '';
+    if (newInfo.type === 'id_card' && newInfo.fields['First Name'] && newInfo.fields['Last Name']) {
+      displayValue = `${newInfo.fields['First Name']} ${newInfo.fields['Last Name']}`;
+    } else {
+      displayValue = Object.values(newInfo.fields).find(value => value.trim() !== '') || '';
+    }
+    
+    console.log('🔄 handleAddInfo: Calling addInfo with data:', {
+      type: newInfo.type,
+      label: label,
+      value: displayValue,
+      category: selectedType?.category,
+      fields: newInfo.fields
+    });
+    
+    const success = await addInfo({
+      type: newInfo.type,
+      label: label,
+      value: displayValue,
+      category: (selectedType?.category as 'personal' | 'financial' | 'identity' | 'documents') || 'personal',
+      fields: newInfo.fields
+    });
+    
+    console.log('🔄 handleAddInfo: addInfo result:', success);
+    console.log('🔄 handleAddInfo: Current error state after addInfo:', error);
+    
+    if (success) {
+      toast.success('Information added successfully!');
+      setNewInfo({ type: 'id_card', label: 'Personal Details', value: '', fields: {} });
+      setIsAddingNew(false);
+    } else {
+      // The error will already be shown by the notificationService in useVault
+      // and the error state will be displayed in the error banner
+      console.error('❌ Failed to add information. Error state:', error);
     }
   };
 
@@ -444,10 +468,10 @@ export const VaultPage: React.FC = () => {
         ? 'cyberpunk-theme' 
         : 'gradient-bg'
     }`}>
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-8 py-8">
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg flex items-center space-x-3">
+          <div className="mb-8 p-6 bg-error-50 border border-error-200 rounded-lg flex items-center gap-4">
             <AlertCircle className="w-5 h-5 text-error-600" />
             <div>
               <h3 className="text-sm font-medium text-error-800">Error</h3>
@@ -458,12 +482,12 @@ export const VaultPage: React.FC = () => {
 
         {/* Wallet Connected Success Banner */}
         {isWalletConnected && (
-          <div className={`mb-6 p-4 border rounded-lg flex items-center space-x-3 transition-all duration-300 ${
+          <div className={`mb-8 p-6 border rounded-lg flex items-center gap-6 transition-all duration-300 ${
             shouldUseCyberpunk 
               ? 'cyberpunk-card border-green-400/30' 
               : 'bg-success-50 border-success-200'
           }`}>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3">
               <Shield className={`w-5 h-5 transition-all duration-300 ${
                 shouldUseCyberpunk 
                   ? 'text-green-400' 
@@ -475,7 +499,7 @@ export const VaultPage: React.FC = () => {
                     ? 'text-white cyberpunk-font' 
                     : 'text-success-800'
                 }`}>
-                  {shouldUseCyberpunk ? 'SAFE VAULT SECURED' : 'Vault Secured'}
+                  {shouldUseCyberpunk ? 'BIT VAULT SECURED' : 'Vault Secured'}
                 </p>
                 <p className={`text-sm mt-1 transition-all duration-300 ${
                   shouldUseCyberpunk 
@@ -488,7 +512,7 @@ export const VaultPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className={`flex items-center space-x-2 transition-all duration-300 ${
+            <div className={`flex items-center gap-4 transition-all duration-300 ${
               shouldUseCyberpunk 
                 ? 'text-green-400' 
                 : 'text-success-600'
@@ -514,7 +538,7 @@ export const VaultPage: React.FC = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center gap-4 mb-4">
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 ${
               shouldUseCyberpunk 
                 ? 'cyberpunk-gradient-bg' 
@@ -532,7 +556,7 @@ export const VaultPage: React.FC = () => {
                   ? 'cyberpunk-gradient-text cyberpunk-font' 
                   : 'text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent'
               }`}>
-                {shouldUseCyberpunk ? 'SAFE VAULT' : 'Safe Vault'}
+                {shouldUseCyberpunk ? 'BIT VAULT' : 'Bit Vault'}
               </h1>
               <p className={`transition-all duration-300 ${
                 shouldUseCyberpunk 
@@ -540,24 +564,24 @@ export const VaultPage: React.FC = () => {
                   : 'text-secondary-600'
               }`}>
                 {shouldUseCyberpunk 
-                  ? 'Secure Safe Vault data storage and management system' 
+                  ? 'Secure Bit Vault data storage and management system' 
                   : 'Securely store and manage your personal information'}
               </p>
             </div>
           </div>
           
           <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 text-sm text-secondary-600">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-6 text-sm text-secondary-600">
+                <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${isWalletConnected ? 'bg-success-500' : 'bg-yellow-500'}`}></div>
                   <span>{isWalletConnected ? 'Wallet connected' : 'Wallet not connected'}</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-3">
                   <Lock className="w-4 h-4" />
                   <span>End-to-end encryption</span>
                 </div>
                 {stats && (
-                  <div className={`flex items-center space-x-2 transition-all duration-300 ${
+                  <div className={`flex items-center gap-4 transition-all duration-300 ${
                     shouldUseCyberpunk 
                       ? 'text-white/80 cyberpunk-font' 
                       : ''
@@ -567,10 +591,10 @@ export const VaultPage: React.FC = () => {
                 )}
               </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-4">
               <Button 
                 onClick={() => setIsAddingNew(true)}
-                className="flex items-center space-x-2"
+                className="flex items-center gap-4"
                 disabled={loading}
                 title="Add new information"
               >
@@ -581,7 +605,7 @@ export const VaultPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={generateMasterBarcode}
-                className="flex items-center space-x-2"
+                className="flex items-center gap-4"
                 disabled={personalInfo.length === 0 || loading}
                 title="Generate QR code"
               >
@@ -592,7 +616,7 @@ export const VaultPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={handleBackupVault}
-                className="flex items-center space-x-2"
+                className="flex items-center gap-4"
                 disabled={personalInfo.length === 0 || loading}
                 title="Backup vault data"
               >
@@ -604,9 +628,9 @@ export const VaultPage: React.FC = () => {
 
           {/* Category Filter */}
           <div className="mt-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-6">
               <span className="text-sm font-medium text-secondary-700">Filter by category:</span>
-              <div className="flex space-x-2">
+              <div className="flex gap-4">
                 <Button
                   variant={selectedCategory === 'all' ? 'primary' : 'outline'}
                   size="sm"
@@ -646,20 +670,21 @@ export const VaultPage: React.FC = () => {
             shouldUseCyberpunk ? 'cyberpunk-card' : ''
           }`}>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between w-full">
                 <h3 className={`text-lg font-semibold transition-all duration-300 ${
                   shouldUseCyberpunk 
                     ? 'text-white cyberpunk-font' 
                     : ''
                 }`}>
                   {shouldUseCyberpunk 
-                    ? (editingId ? 'EDIT SAFE MODULE' : 'ADD SAFE MODULE')
+                    ? (editingId ? 'EDIT BIT MODULE' : 'ADD BIT MODULE')
                     : (editingId ? 'Edit Information' : 'Add New Information')
                   }
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="ml-auto"
                   onClick={() => {
                     setIsAddingNew(false);
                     setEditingId(null);
@@ -677,12 +702,12 @@ export const VaultPage: React.FC = () => {
                     Information Type
                   </label>
                   <select
-                    value={newInfo.type}
+                    value={newInfo.type || 'id_card'}
                     onChange={(e) => setNewInfo({ ...newInfo, type: e.target.value as PersonalInfo['type'] })}
-                    className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                   >
                     {infoTypes.map(type => (
-                      <option key={type.value} value={type.value}>
+                      <option key={type.value} value={type.value} className="text-gray-900">
                         {type.label}
                       </option>
                     ))}
@@ -696,7 +721,7 @@ export const VaultPage: React.FC = () => {
                   <h4 className="text-md font-semibold text-secondary-900 mb-4">
                     Additional Details
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {Object.entries(getFieldsForType(newInfo.type)).map(([fieldName, defaultValue]) => (
                       <div key={fieldName}>
                         <Input
@@ -717,7 +742,7 @@ export const VaultPage: React.FC = () => {
                 </div>
               )}
               
-              <div className="flex justify-end space-x-3 mt-4">
+              <div className="flex justify-end gap-4 mt-4">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -731,7 +756,7 @@ export const VaultPage: React.FC = () => {
                 </Button>
                 <Button
                   onClick={editingId ? handleSaveEdit : handleAddInfo}
-                  className="flex items-center space-x-2"
+                  className="flex items-center gap-4"
                   disabled={loading}
                 >
                   {loading ? (
@@ -747,14 +772,14 @@ export const VaultPage: React.FC = () => {
         )}
 
         {/* Information Grid */}
-        <div className="space-y-8">
+        <div className="gap-12">
           {Object.entries(groupedInfo).map(([category, items]) => {
             const CategoryIcon = getCategoryIcon(category);
             
             return (
               <div key={category}>
                 {/* Category Header */}
-                <div className="flex items-center space-x-3 mb-4">
+                <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
                     <CategoryIcon className="w-4 h-4 text-primary-600" />
                   </div>
@@ -781,7 +806,7 @@ export const VaultPage: React.FC = () => {
                     }`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         isWalletConnected 
                           ? 'bg-success-100' 
@@ -794,14 +819,14 @@ export const VaultPage: React.FC = () => {
                         }`} />
                       </div>
                       <div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-3">
                           <h3 className={`font-semibold ${
                             isWalletConnected 
                               ? 'text-secondary-900' 
                               : 'text-secondary-600'
                           }`}>{info.label}</h3>
                           {isWalletConnected && (
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center gap-2">
                               <Lock className="w-3 h-3 text-success-500" />
                               <span className="text-xs text-success-600 font-medium">Secured</span>
                             </div>
@@ -811,7 +836,7 @@ export const VaultPage: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -857,7 +882,7 @@ export const VaultPage: React.FC = () => {
                 </CardHeader>
                 
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="gap-6">
                     <div>
                       <label className="block text-sm font-medium text-secondary-700 mb-1">
                         Value
@@ -873,11 +898,11 @@ export const VaultPage: React.FC = () => {
 
                     {/* Additional Fields */}
                     {Object.keys(info.fields).length > 0 && (
-                      <div className="space-y-2">
+                      <div className="gap-4">
                         <label className="block text-sm font-medium text-secondary-700">
                           Additional Details
                         </label>
-                        <div className="space-y-2">
+                        <div className="gap-4">
                           {Object.entries(info.fields).map(([fieldName, fieldValue], fieldIndex) => (
                             <div key={`${getInfoId(info)}-field-${fieldIndex}-${fieldName}`} className="flex justify-between items-center p-2 bg-secondary-50 rounded border">
                               <span className="text-sm font-medium text-secondary-600">{fieldName}:</span>
@@ -891,7 +916,7 @@ export const VaultPage: React.FC = () => {
                     )}
                     
                     <div className="flex items-center justify-between text-sm text-secondary-500">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-3">
                         <Lock className="w-3 h-3" />
                         <span>Encrypted</span>
                       </div>
@@ -950,7 +975,7 @@ export const VaultPage: React.FC = () => {
               ? 'cyberpunk-card border-green-400/30' 
               : 'bg-white border-secondary-200'
           }`}>
-            <div className="flex items-center space-x-3 mb-4">
+            <div className="flex items-center gap-4 mb-4">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
                 shouldUseCyberpunk 
                   ? 'cyberpunk-gradient-bg' 
@@ -968,7 +993,7 @@ export const VaultPage: React.FC = () => {
                     ? 'text-white cyberpunk-font' 
                     : 'text-secondary-900'
                 }`}>
-                  {shouldUseCyberpunk ? 'SAFE THEME SELECTOR' : 'Theme Selection'}
+                  {shouldUseCyberpunk ? 'BIT THEME SELECTOR' : 'Theme Selection'}
                 </h3>
                 <p className={`text-sm transition-all duration-300 ${
                   shouldUseCyberpunk 
@@ -1212,7 +1237,7 @@ export const VaultPage: React.FC = () => {
                 ? 'cyberpunk-card border-blue-400/30' 
                 : 'bg-blue-50 border-blue-200'
             }`}>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start gap-4">
                 <Info className={`w-5 h-5 mt-0.5 transition-all duration-300 ${
                   shouldUseCyberpunk ? 'text-blue-400' : 'text-blue-600'
                 }`} />
@@ -1255,7 +1280,7 @@ export const VaultPage: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="gap-8">
                 <div>
                   <label className="block text-sm font-medium text-secondary-700 mb-2">
                     Backup Data
@@ -1269,7 +1294,7 @@ export const VaultPage: React.FC = () => {
                   />
                 </div>
                 
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end gap-4">
                   <Button
                     variant="outline"
                     onClick={() => setShowBackupModal(false)}
@@ -1280,7 +1305,7 @@ export const VaultPage: React.FC = () => {
                   <Button
                     onClick={handleRestoreVault}
                     disabled={!backupData.trim() || loading}
-                    className="flex items-center space-x-2"
+                    className="flex items-center gap-4"
                   >
                     {loading ? (
                       <LoadingSpinner size="sm" />

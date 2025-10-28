@@ -478,8 +478,130 @@ class UnifiedWalletService {
   }
 
   public async connectWalletWithAuth(walletId: string): Promise<WalletConnectionResult> {
-    // For Solana wallets, this is the same as connectWallet
-    return this.connectWallet(walletId);
+    // First connect the wallet
+    const connectionResult = await this.connectWallet(walletId);
+    
+    // If connection successful, authenticate with backend
+    if (connectionResult.success && connectionResult.address) {
+      try {
+        console.log('🔄 Authenticating wallet with backend...');
+        
+        // Try to get a nonce first (Solana wallet authentication)
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+        
+        // Step 1: Get nonce from backend
+        const nonceResponse = await fetch(`${API_URL}/auth/wallet/nonce`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: connectionResult.address,
+            walletType: 'solana',
+            chainId: connectionResult.chainId || 101
+          })
+        }).catch(err => {
+          console.log('⚠️ Nonce request failed, using default message:', err);
+          return null;
+        });
+        
+        let authMessage = `Welcome to BitAI!\n\nPlease sign this message to authenticate your wallet.\n\nThis request will not trigger any blockchain transaction or cost any fees.\n\nAddress: ${connectionResult.address}`;
+        let savedNonce = null;
+        
+        if (nonceResponse && nonceResponse.ok) {
+          try {
+            const nonceData = await nonceResponse.json();
+            if (nonceData.data?.authMessage) {
+              authMessage = nonceData.data.authMessage;
+            }
+            if (nonceData.data?.nonce) {
+              savedNonce = nonceData.data.nonce;
+            }
+            console.log('✅ Got nonce for authentication:', savedNonce);
+          } catch (parseError) {
+            console.log('⚠️ Could not parse nonce response, using default message');
+          }
+        } else {
+          console.log('⚠️ Could not get nonce, using default message');
+        }
+        
+        // Step 2: Sign message with Solana wallet
+        let signature: string | null = null;
+        try {
+          const wallet = this.wallets.get(walletId);
+          if (wallet && (window as any).solana) {
+            // Use the proper Solana message signing API with proper message structure
+            const message = new TextEncoder().encode(authMessage);
+            const signedMessage = await (window as any).solana.signMessage(message, 'utf8');
+            
+            if (signedMessage && signedMessage.signature) {
+              // Signature is already Uint8Array
+              signature = Array.from(signedMessage.signature).join(',');
+              console.log('✅ Message signed successfully');
+            }
+          }
+        } catch (signError) {
+          console.error('❌ Failed to sign message:', signError);
+          console.log('ℹ️ Skipping authentication, wallet connected locally only');
+        }
+        
+        // Step 3: Verify signature and get JWT token
+        if (signature) {
+          try {
+            const verifyResponse = await fetch(`${API_URL}/auth/wallet/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                walletAddress: connectionResult.address,
+                authMessage: authMessage,
+                signature: signature,
+                nonce: savedNonce || 'generated',
+                walletType: 'solana',
+                chainId: connectionResult.chainId || 101
+              })
+            });
+          
+            if (verifyResponse.ok) {
+              const data = await verifyResponse.json();
+              console.log('✅ Wallet authenticated with backend:', data);
+              
+              // Handle both direct token and nested token formats
+              let token = null;
+              if (data.token) {
+                token = data.token;
+              } else if (data.data?.token) {
+                token = data.data.token;
+              } else if (data.data?.authToken) {
+                token = data.data.authToken;
+              }
+              
+              if (token) {
+                localStorage.setItem('jwtToken', token);
+                console.log('✅ JWT token stored');
+                
+                // Also store user data if available
+                if (data.data?.user || data.user) {
+                  localStorage.setItem('user', JSON.stringify(data.data?.user || data.user));
+                }
+              } else {
+                console.warn('⚠️ Backend did not return a token');
+              }
+            } else {
+              const errorText = await verifyResponse.text();
+              console.warn(`⚠️ Backend returned status ${verifyResponse.status}:`, errorText);
+            }
+          } catch (verifyError) {
+            console.log('⚠️ Verify request failed:', verifyError);
+          }
+        }
+      } catch (backendError) {
+        console.log('ℹ️ Backend authentication unavailable, wallet connected locally');
+      }
+    }
+    
+    return connectionResult;
   }
 
   public async disconnectWallet(walletId: string): Promise<WalletConnectionResult> {

@@ -121,29 +121,9 @@ export const useBuiltInWallet = (): UseBuiltInWalletReturn => {
           setConnectedWallets(refreshedConnected);
         }, 200);
         
-        // Save wallet connection to backend
-        if (result.address && result.chainId) {
-          try {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
-            await fetch(`${API_URL}/wallet/connect`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`
-              },
-              body: JSON.stringify({
-                address: result.address,
-                displayAddress: `${result.address.slice(0, 6)}...${result.address.slice(-4)}`,
-                provider: result.walletInfo?.name || 'Unknown',
-                chainId: result.chainId
-              })
-            });
-            console.log('✅ Wallet saved to backend:', result.address);
-          } catch (backendError) {
-            console.warn('⚠️ Could not save wallet to backend:', backendError);
-            // Continue anyway - wallet is connected locally
-          }
-        }
+        // Wallet connection is now handled in connectWalletWithAuth
+        // It will attempt to authenticate and get JWT token
+        console.log('✅ Wallet connected successfully');
         
         // Notify success
         if (result.walletInfo && result.address) {

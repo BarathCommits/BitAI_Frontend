@@ -169,7 +169,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                 ? 'text-white cyberpunk-font' 
                 : 'text-secondary-900'
             }`}>
-              {theme === 'cyberpunk' ? 'SAFE AI PROVIDER' : 'AI Provider'}
+              {theme === 'cyberpunk' ? 'BIT AI PROVIDER' : 'AI Provider'}
             </h3>
           </div>
           <div className={`flex items-center space-x-2 text-sm transition-all duration-300 ${
@@ -226,7 +226,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                           ? 'text-white cyberpunk-font' 
                           : 'text-secondary-900'
                       }`}>
-                        {theme === 'cyberpunk' ? 'NO SAFE PROVIDER SELECTED' : 'No Provider Selected'}
+                        {theme === 'cyberpunk' ? 'NO BIT PROVIDER SELECTED' : 'No Provider Selected'}
                       </h4>
                       <p className={`text-sm transition-all duration-300 ${
                         theme === 'cyberpunk' 
