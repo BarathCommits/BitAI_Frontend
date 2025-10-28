@@ -56,7 +56,7 @@ export const ChatPage: React.FC = () => {
   const [mainSessionMessages, setMainSessionMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '👋 Hello! I\'m Safe AI, your intelligent Web3 companion.\n\n💬 **Chat Available:** You can ask me questions about Web3, DeFi, NFTs, and blockchain technology right now!\n\n🔒 **Wallet Features:** Connect your wallet using the wallet icon in the header to access:\n• Safe Vault management\n• dApp Store\n• Advanced Web3 interactions\n\nWhat would you like to know about Web3?',
+      content: '👋 Hello! I\'m Bit AI, your intelligent Web3 companion.\n\n💬 **Chat Available:** You can ask me questions about Web3, DeFi, NFTs, and blockchain technology right now!\n\n🔒 **Wallet Features:** Connect your wallet using the wallet icon in the header to access:\n• Bit Vault management\n• dApp Store\n• Advanced Web3 interactions\n\nWhat would you like to know about Web3?',
       role: 'assistant',
       timestamp: new Date()
     },
@@ -84,7 +84,7 @@ export const ChatPage: React.FC = () => {
       setWalletSessionMessages([
         {
           id: '1',
-          content: '👋 Hello! I\'m Safe AI, your Web3 companion.\n\n💬 **Advanced Features Available:**\n• Safe Vault management\n• dApp Store\n• Advanced Web3 interactions\n• Real-time balance tracking\n\nWhat would you like to explore?',
+          content: '👋 Hello! I\'m Bit AI, your Web3 companion.\n\n💬 **Advanced Features Available:**\n• Bit Vault management\n• dApp Store\n• Advanced Web3 interactions\n• Real-time balance tracking\n\nWhat would you like to explore?',
           role: 'assistant',
           timestamp: new Date()
         },
@@ -737,7 +737,7 @@ What specific Web3 topic interests you most?`;
     setMessages([
       {
         id: '1',
-        content: '👋 Hello! I\'m Safe AI, your intelligent Web3 companion.\n\n💬 **AI Chat Available:** You can chat with me about Web3 topics without connecting a wallet!\n\n🔒 **Wallet Features:** Connect your wallet to access:\n• Personal vault management\n• dApp store interactions\n• Wallet-specific AI assistance\n\nWhat would you like to know about Web3?',
+        content: '👋 Hello! I\'m Bit AI, your intelligent Web3 companion.\n\n💬 **AI Chat Available:** You can chat with me about Web3 topics without connecting a wallet!\n\n🔒 **Wallet Features:** Connect your wallet to access:\n• Personal vault management\n• dApp store interactions\n• Wallet-specific AI assistance\n\nWhat would you like to know about Web3?',
         role: 'assistant',
         timestamp: new Date(),
       },
@@ -889,14 +889,14 @@ What specific Web3 topic interests you most?`;
                 ? 'cyberpunk-font cyberpunk-gradient-text cyberpunk-text-glow' 
                 : 'text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent'
             }`}>
-              Safe AI
+              Bit AI
             </h1>
             <p className={`${
               theme === 'cyberpunk' 
                 ? 'text-white/80 cyberpunk-font cyberpunk-text-glow' 
                 : 'text-secondary-600'
             }`}>
-              {theme === 'cyberpunk' ? 'SAFE INTERFACE ACTIVE' : 'Let\'s get started...'}
+              {theme === 'cyberpunk' ? 'BIT INTERFACE ACTIVE' : 'Let\'s get started...'}
             </p>
             {isConnected && walletInfo?.address && (
               <div className="flex items-center space-x-2 mt-1">
@@ -958,7 +958,7 @@ What specific Web3 topic interests you most?`;
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-secondary-700 mb-2">
-                  Welcome to Safe AI
+                  Welcome to Bit AI
                 </h3>
                 <p className="text-secondary-500 max-w-md mb-6">
                   Your intelligent assistant for Web3. Ask me anything about blockchain, DeFi, NFTs, or connect your wallet for personalized insights.
