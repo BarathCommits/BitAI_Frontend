@@ -156,6 +156,18 @@ export const API_CONFIG = {
       HEALTH: '/api/analytics/health'
     },
     
+    // Solana Backend (Solana Service - Port 3007)
+    SOLANA: {
+      BALANCE: '/api/solana/balance',
+      ACCOUNT: '/api/solana/account',
+      TOKENS: '/api/solana/tokens',
+      TRANSACTIONS: '/api/solana/transactions',
+      NETWORK: '/api/solana/network',
+      VALIDATE: '/api/solana/validate',
+      CONTEXT: '/api/solana/context',
+      HEALTH: '/api/solana/health'
+    },
+    
     // Health Checks
     HEALTH: {
       GATEWAY: '/health',

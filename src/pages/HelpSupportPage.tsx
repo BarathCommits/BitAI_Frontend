@@ -48,7 +48,7 @@ const faqData: FAQItem[] = [
   },
   {
     id: '4',
-    question: 'How do I submit a dApp to the Safe AppStore?',
+    question: 'How do I submit a dApp to the Bit AppStore?',
     answer: 'Navigate to the Developer Portal, click "Submit New dApp", fill out the submission form with your dApp details, smart contract information, and AI integration preferences, then submit for review.',
     category: 'developer'
   },

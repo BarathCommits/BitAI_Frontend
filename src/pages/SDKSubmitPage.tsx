@@ -397,7 +397,7 @@ console.log('Current status:', status);`;
                     <Terminal className="w-5 h-5 text-green-600 mt-0.5" />
                     <div>
                       <p className="font-medium text-secondary-900">CI/CD Integration</p>
-                      <p className="text-sm text-secondary-600">Automate deployments to Safe AppStore</p>
+                      <p className="text-sm text-secondary-600">Automate deployments to Bit AppStore</p>
                     </div>
                   </div>
                 </div>

@@ -58,7 +58,9 @@ class SolanaBackendService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.REACT_APP_SOLANA_SERVICE_URL || 'http://localhost:3007/api';
+    // Use direct backend connection with CORS proxy if needed
+    // Note: This requires the backend to allow requests from http://localhost:3001
+    this.baseUrl = process.env.REACT_APP_SOLANA_API_URL || 'http://localhost:3007';
   }
 
   /**
@@ -66,7 +68,7 @@ class SolanaBackendService {
    */
   async getBalance(address: string): Promise<BackendResponse<BalanceData>> {
     try {
-      const response = await fetch(`${this.baseUrl}/solana/balance/${address}`);
+      const response = await fetch(`${this.baseUrl}/api/solana/balance/${address}`);
       return await response.json();
     } catch (error) {
       return {
@@ -81,7 +83,7 @@ class SolanaBackendService {
    */
   async getAccountInfo(address: string): Promise<BackendResponse<AccountInfo>> {
     try {
-      const response = await fetch(`${this.baseUrl}/solana/account/${address}`);
+      const response = await fetch(`${this.baseUrl}/api/solana/account/${address}`);
       return await response.json();
     } catch (error) {
       return {
@@ -96,7 +98,7 @@ class SolanaBackendService {
    */
   async getTokenAccounts(address: string): Promise<BackendResponse<TokenAccount[]>> {
     try {
-      const response = await fetch(`${this.baseUrl}/solana/tokens/${address}`);
+      const response = await fetch(`${this.baseUrl}/api/solana/tokens/${address}`);
       return await response.json();
     } catch (error) {
       return {
@@ -111,7 +113,7 @@ class SolanaBackendService {
    */
   async getTransactionHistory(address: string, limit: number = 10): Promise<BackendResponse<TransactionData[]>> {
     try {
-      const response = await fetch(`${this.baseUrl}/transactions/history/${address}?limit=${limit}`);
+      const response = await fetch(`${this.baseUrl}/api/solana/transactions/${address}?limit=${limit}`);
       return await response.json();
     } catch (error) {
       return {
@@ -126,7 +128,7 @@ class SolanaBackendService {
    */
   async getTransactionDetails(signature: string): Promise<BackendResponse<TransactionData>> {
     try {
-      const response = await fetch(`${this.baseUrl}/transactions/details/${signature}`);
+      const response = await fetch(`${this.baseUrl}/api/solana/transactions/details/${signature}`);
       return await response.json();
     } catch (error) {
       return {
@@ -141,7 +143,7 @@ class SolanaBackendService {
    */
   async getNetworkInfo(): Promise<BackendResponse<NetworkInfo>> {
     try {
-      const response = await fetch(`${this.baseUrl}/solana/network`);
+      const response = await fetch(`${this.baseUrl}/api/solana/network`);
       return await response.json();
     } catch (error) {
       return {
@@ -156,7 +158,7 @@ class SolanaBackendService {
    */
   async validateAddress(address: string): Promise<BackendResponse<{ address: string; valid: boolean }>> {
     try {
-      const response = await fetch(`${this.baseUrl}/solana/validate`, {
+      const response = await fetch(`${this.baseUrl}/api/solana/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,7 +179,7 @@ class SolanaBackendService {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl.replace('/api', '')}/health`);
+      const response = await fetch(`${this.baseUrl}/health`);
       const data = await response.json();
       return data.status === 'healthy';
     } catch {
@@ -190,7 +192,7 @@ class SolanaBackendService {
    */
   async getServiceStatus(): Promise<BackendResponse<any>> {
     try {
-      const response = await fetch(`${this.baseUrl.replace('/api', '')}/health`);
+      const response = await fetch(`${this.baseUrl}/health`);
       return await response.json();
     } catch (error) {
       return {

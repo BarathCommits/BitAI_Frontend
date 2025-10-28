@@ -161,7 +161,7 @@ export const SafeStorePage: React.FC = () => {
                   ? 'cyberpunk-gradient-text cyberpunk-font' 
                   : 'text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent'
               }`}>
-                {isCyberpunk ? 'Safe AppStore' : 'Safe AppStore'}
+                {isCyberpunk ? 'Bit AppStore' : 'Bit AppStore'}
               </h1>
               <p className={`transition-all duration-300 ${
                 isCyberpunk 

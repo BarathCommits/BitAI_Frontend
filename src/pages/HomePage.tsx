@@ -29,7 +29,7 @@ export const HomePage: React.FC = () => {
     },
     {
       icon: Store,
-      title: 'Safe AppStore',
+      title: 'Bit AppStore',
       description: 'Discover and upload secure decentralized applications.',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
@@ -126,7 +126,7 @@ export const HomePage: React.FC = () => {
                   : ''
               }`}>
                 <Store className="w-5 h-5 mr-2" />
-                {isCyberpunk ? 'ACCESS SAFE APPSTORE' : 'Explore Safe AppStore'}
+                {isCyberpunk ? 'ACCESS BIT APPSTORE' : 'Explore Bit AppStore'}
               </Button>
             </Link>
           </div>

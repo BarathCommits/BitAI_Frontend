@@ -52,7 +52,9 @@ export const ChatPage: React.FC = () => {
   // Theme state based on wallet connection
   const theme = isConnected ? 'cyberpunk' : 'modern';
 
-  const [messages, setMessages] = useState<Message[]>([
+  // Initialize empty messages state for both sessions
+  const [connectedMessages, setConnectedMessages] = useState<Message[]>([]);
+  const [disconnectedMessages, setDisconnectedMessages] = useState<Message[]>([
     {
       id: '1',
       content: '👋 Hello! I\'m Safe AI, your intelligent Web3 companion.\n\n💬 **Chat Available:** You can ask me questions about Web3, DeFi, NFTs, and blockchain technology right now!\n\n🔒 **Wallet Features:** Connect your wallet using the wallet icon in the header to access:\n• Safe Vault management\n• dApp Store\n• Advanced Web3 interactions\n\nWhat would you like to know about Web3?',
@@ -60,6 +62,11 @@ export const ChatPage: React.FC = () => {
       timestamp: new Date()
     },
   ]);
+
+  // Use the appropriate messages based on connection status
+  const messages = isConnected ? connectedMessages : disconnectedMessages;
+  const setMessages = isConnected ? setConnectedMessages : setDisconnectedMessages;
+
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -70,6 +77,20 @@ export const ChatPage: React.FC = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Initialize connected session greeting when wallet connects
+  useEffect(() => {
+    if (isConnected && connectedMessages.length === 0) {
+      setConnectedMessages([
+        {
+          id: '1',
+          content: '👋 Hello! I\'m Safe AI, your Web3 companion.\n\n💬 **Advanced Features Available:**\n• Safe Vault management\n• dApp Store\n• Advanced Web3 interactions\n• Real-time balance tracking\n\nWhat would you like to explore?',
+          role: 'assistant',
+          timestamp: new Date()
+        },
+      ]);
+    }
+  }, [isConnected]);
 
   // Load dApps on mount (only if authenticated)
   useEffect(() => {

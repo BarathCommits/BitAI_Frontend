@@ -25,7 +25,7 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'AI Chat', href: '/', icon: MessageSquare, badge: 'New' },
   { name: 'Home', href: '/home', icon: Home },
-  { name: 'Safe AppStore', href: '/safe-store', icon: Store },
+  { name: 'Bit AppStore', href: '/safe-store', icon: Store },
   { name: 'Safe Vault', href: '/vault', icon: Shield },
 ];
 

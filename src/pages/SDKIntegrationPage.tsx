@@ -156,7 +156,7 @@ export const SDKIntegrationPage: React.FC = () => {
       {
         method: 'GET',
         path: '/api/v1/dapps',
-        description: 'List all dApps in the Safe AppStore',
+        description: 'List all dApps in the Bit AppStore',
         auth: false,
         params: [
           { name: 'page', type: 'number', required: false, description: 'Page number (default: 1)' },
@@ -179,7 +179,7 @@ export const SDKIntegrationPage: React.FC = () => {
       {
         method: 'POST',
         path: '/api/v1/dapps/submit',
-        description: 'Submit a new dApp to the Safe AppStore',
+        description: 'Submit a new dApp to the Bit AppStore',
         auth: true,
         body: [
           { name: 'name', type: 'string', required: true, description: 'dApp name' },
@@ -261,7 +261,7 @@ export const SDKIntegrationPage: React.FC = () => {
             <strong>SDK = Software Development Kit</strong>
           </p>
           <p className="text-secondary-700">
-            An SDK is a pre-built library or package that developers install to easily interact with a platform (like Safe AppStore) 
+            An SDK is a pre-built library or package that developers install to easily interact with a platform (like Bit AppStore) 
             <strong> without writing complex API calls manually</strong>.
           </p>
         </CardContent>
