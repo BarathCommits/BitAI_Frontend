@@ -26,7 +26,7 @@ const navigation: NavItem[] = [
   { name: 'AI Chat', href: '/', icon: MessageSquare, badge: 'New' },
   { name: 'Home', href: '/home', icon: Home },
   { name: 'Bit AppStore', href: '/safe-store', icon: Store },
-  { name: 'Safe Vault', href: '/vault', icon: Shield },
+  { name: 'Bit Vault', href: '/vault', icon: Shield },
 ];
 
 const developer: NavItem[] = [
@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
           </div>
           {isExpanded && (
             <span className="ml-2 text-xl font-bold text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              Safe
+              Bit
             </span>
           )}
         </div>

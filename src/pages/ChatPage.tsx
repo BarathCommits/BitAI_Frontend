@@ -1040,7 +1040,7 @@ What specific Web3 topic interests you most?`;
                       handleSendMessage();
                     }
                   }}
-                  placeholder={theme === 'cyberpunk' ? "Enter Safe command..." : "Ask me anything about Web3, DeFi, NFTs..."}
+                  placeholder={theme === 'cyberpunk' ? "I'm your Solana assistant, how can I help you?" : "Ask me anything about Web3, DeFi, NFTs..."}
                   disabled={isLoading}
                   className={`resize-none transition-all duration-300 ${
                     theme === 'cyberpunk' 

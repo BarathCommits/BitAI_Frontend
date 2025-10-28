@@ -103,7 +103,7 @@ export const Header: React.FC = () => {
                 {/* Search Input */}
                 <input
                   type="text"
-                  placeholder="Search Safe features..."
+                  placeholder="Search Bit features..."
                   className="flex-1 bg-transparent border-none outline-none py-2 px-2 text-sm text-secondary-900 placeholder-secondary-400"
                 />
                 

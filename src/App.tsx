@@ -71,7 +71,7 @@ function App() {
         <div className="text-center">
           <LoadingSpinner size="lg" />
           <p className="mt-4 text-white text-lg">
-            {walletExtensionsLoaded ? (walletLoading ? 'Restoring wallet connection...' : 'Loading Safe...') : 'Initializing wallet service...'}
+            {walletExtensionsLoaded ? (walletLoading ? 'Restoring wallet connection...' : 'Loading Bit...') : 'Initializing wallet service...'}
           </p>
         </div>
       </div>
@@ -85,7 +85,7 @@ function App() {
           <div className="min-h-screen flex items-center justify-center gradient-bg">
             <div className="text-center">
               <LoadingSpinner size="lg" />
-              <p className="mt-4 text-white text-lg">Loading Safe...</p>
+              <p className="mt-4 text-white text-lg">Loading Bit...</p>
             </div>
           </div>
         }
