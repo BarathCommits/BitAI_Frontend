@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WalletInfo } from '../services/Web3WalletService';
 import { walletRecoveryService } from '../utils/walletRecovery';
+import { walletLogger } from '../utils/logger';
 
 interface WalletState {
   // State
@@ -82,7 +83,7 @@ export const useWalletStore = create<WalletState>()(
         // Save wallet address to localStorage for backward compatibility with VaultService
         if (walletInfo.address) {
           localStorage.setItem('walletAddress', walletInfo.address);
-          console.log('💾 Wallet address saved to localStorage:', walletInfo.address);
+          // Logging removed - use walletLogger if needed
         }
 
         // Dispatch wallet connected event
@@ -155,24 +156,24 @@ export const useWalletStore = create<WalletState>()(
           const walletAddress = localStorage.getItem('walletAddress');
           
           if (walletAddress) {
-            console.log('🔄 Wallet: Restoring wallet state...');
+            walletLogger.debug('Restoring wallet state...');
             
             // Use recovery service to attempt connection recovery
             const recovered = await walletRecoveryService.attemptRecovery();
             
             if (recovered) {
-              console.log('✅ Wallet: Connection recovered successfully');
+              walletLogger.info('Connection recovered successfully');
               set({ 
                 isConnected: true, 
                 isLoading: false,
                 isInitialized: true 
               });
             } else {
-              console.log('❌ Wallet: Recovery failed, clearing state');
+              walletLogger.warn('Recovery failed, clearing state');
               get().disconnectWallet();
             }
           } else {
-            console.log('ℹ️ Wallet: No stored connection found');
+            walletLogger.debug('No stored connection found');
             set({ 
               isConnected: false, 
               walletInfo: null, 
@@ -182,7 +183,7 @@ export const useWalletStore = create<WalletState>()(
             });
           }
         } catch (error) {
-          console.error('❌ Wallet: Failed to initialize wallet state:', error);
+          walletLogger.error('Failed to initialize wallet state', error);
           set({ 
             error: error instanceof Error ? error.message : 'Failed to initialize wallet',
             isLoading: false,
@@ -209,7 +210,7 @@ export const useWalletStore = create<WalletState>()(
               });
               
               if (accounts.length === 0) {
-                console.log('❌ Wallet: No accounts found in browser');
+                walletLogger.warn('No accounts found in browser');
                 return false;
               }
               
@@ -218,7 +219,7 @@ export const useWalletStore = create<WalletState>()(
               );
               
               if (!isAccountConnected) {
-                console.log('❌ Wallet: Account not connected in browser');
+                walletLogger.warn('Account not connected in browser');
                 return false;
               }
               
@@ -231,21 +232,21 @@ export const useWalletStore = create<WalletState>()(
               });
               
               if (!response.ok) {
-                console.log('❌ Wallet: Token validation failed');
+                walletLogger.warn('Token validation failed');
                 return false;
               }
               
-              console.log('✅ Wallet: Connection validation successful');
+              walletLogger.debug('Connection validation successful');
               return true;
             } catch (error) {
-              console.log('❌ Wallet: Connection validation failed:', error);
+              walletLogger.error('Connection validation failed', error);
               return false;
             }
           }
           
           return false;
         } catch (error) {
-          console.error('❌ Wallet: Error validating connection:', error);
+          walletLogger.error('Error validating connection', error);
           return false;
         }
       },

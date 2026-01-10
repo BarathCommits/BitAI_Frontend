@@ -1,4 +1,16 @@
-import React, { useState } from 'react';
+/**
+ * Sidebar Navigation Component
+ * 
+ * Collapsible sidebar navigation with:
+ * - Expandable/collapsible state
+ * - Active route highlighting
+ * - Theme-aware styling (cyberpunk/modern)
+ * - MVP focus: Only Chat navigation active
+ * 
+ * Currently configured for MVP with only ChatPage navigation visible.
+ * Other navigation items are commented out and can be enabled as pages are activated.
+ */
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useBuiltInWallet } from '../../hooks/useBuiltInWallet';
@@ -6,13 +18,13 @@ import { useTheme } from '../../hooks/useTheme';
 import { 
   Home,
   MessageSquare,
-  Store,
-  HelpCircle,
+  // Store, // Non-MVP
+  // HelpCircle, // Non-MVP
   Zap,
   Shield,
   Globe,
-  Code,
-  Book
+  // Code, // Non-MVP
+  // Book // Non-MVP
 } from 'lucide-react';
 
 interface NavItem {
@@ -22,35 +34,39 @@ interface NavItem {
   badge?: string;
 }
 
+// LANDING PAGE FOCUS: Only Chat navigation active - all other pages commented out
+// This simplifies navigation to focus on the core chat experience
 const navigation: NavItem[] = [
-  { name: 'AI Chat', href: '/', icon: MessageSquare, badge: 'New' },
-  { name: 'Home', href: '/home', icon: Home },
-  { name: 'Bit AppStore', href: '/safe-store', icon: Store },
-  { name: 'Bit Vault', href: '/vault', icon: Shield },
+  { name: 'AI Chat', href: '/chat', icon: MessageSquare, badge: 'New' },
+  // All other navigation items commented out - uncomment as pages are enabled
+  // { name: 'Home', href: '/home', icon: Home },
+  // { name: 'bitVault', href: '/vault', icon: Shield },
+  // { name: 'bitAppStore', href: '/bit-store', icon: Store },
 ];
 
-const developer: NavItem[] = [
-  { name: 'Developer Portal', href: '/developer', icon: Code },
-  { name: 'SDK & API Docs', href: '/sdk', icon: Book },
-];
+// Non-MVP Navigation - Commented out
+// const developer: NavItem[] = [
+//   { name: 'Developer Portal', href: '/developer', icon: Code },
+//   { name: 'SDK & API Docs', href: '/sdk', icon: Book },
+// ];
 
-const tools: NavItem[] = [
-  { name: 'Help & Support', href: '/help', icon: HelpCircle },
-];
+// const tools: NavItem[] = [
+//   { name: 'Help & Support', href: '/help', icon: HelpCircle },
+// ];
 
 interface SidebarProps {
   onExpandedChange?: (expanded: boolean) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
+export const Sidebar: React.FC<SidebarProps> = React.memo(({ onExpandedChange }) => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const { isCyberpunk } = useTheme();
 
-  const handleExpandedChange = (expanded: boolean) => {
+  const handleExpandedChange = useCallback((expanded: boolean) => {
     setIsExpanded(expanded);
     onExpandedChange?.(expanded);
-  };
+  }, [onExpandedChange]);
 
   const NavItem: React.FC<{ item: NavItem }> = ({ item }) => {
     const isActive = location.pathname === item.href;
@@ -140,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
           </div>
           {isExpanded && (
             <span className="ml-2 text-xl font-bold text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              Bit
+              bitPorta
             </span>
           )}
         </div>
@@ -153,14 +169,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
             ))}
           </div>
 
-          {/* Divider */}
+          {/* Non-MVP Sections - Commented out */}
+          {/* 
           <div className={`border-t my-4 transition-all duration-300 ${
             isCyberpunk 
               ? 'border-green-400/30' 
               : 'border-secondary-200'
           }`}></div>
 
-          {/* Developer */}
           <div className="space-y-1">
             {isExpanded && (
               <h3 className={`px-3 text-xs font-semibold uppercase tracking-wider ${
@@ -176,10 +192,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
             ))}
           </div>
 
-          {/* Divider */}
           <div className="border-t border-secondary-200 my-4"></div>
 
-          {/* Tools */}
           <div className="space-y-1">
             {isExpanded && (
               <h3 className="px-3 text-xs font-semibold text-secondary-500 uppercase tracking-wider">
@@ -190,30 +204,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
               <NavItem key={item.name} item={item} />
             ))}
           </div>
+          */}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-secondary-200">
+        <div className={cn(
+          'p-4 border-t transition-all duration-200',
+          isCyberpunk 
+            ? 'border-green-400/30' 
+            : 'border-secondary-200'
+        )}>
           <div className={cn(
-            'flex items-center p-3 bg-secondary-50 rounded-lg transition-all duration-200',
-            isExpanded ? 'space-x-3' : 'justify-center'
+            'flex items-center p-3 rounded-lg transition-all duration-200',
+            isExpanded ? 'space-x-3' : 'justify-center',
+            isCyberpunk 
+              ? 'bg-green-500/10' 
+              : 'bg-secondary-50'
           )}>
             <div className={cn(
-              'bg-primary-100 rounded-full flex items-center justify-center transition-all duration-200',
-              isExpanded ? 'w-8 h-8' : 'w-12 h-12'
+              'rounded-full flex items-center justify-center transition-all duration-200',
+              isExpanded ? 'w-8 h-8' : 'w-12 h-12',
+              isCyberpunk 
+                ? 'cyberpunk-gradient-bg' 
+                : 'bg-primary-100'
             )}>
-              <Globe className={cn(
-                'text-primary-600 transition-all duration-200',
-                isExpanded ? 'w-4 h-4' : 'w-6 h-6'
+              <MessageSquare className={cn(
+                'transition-all duration-200',
+                isExpanded ? 'w-4 h-4' : 'w-6 h-6',
+                isCyberpunk 
+                  ? 'text-white' 
+                  : 'text-primary-600'
               )} />
             </div>
             {isExpanded && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-secondary-900">
-                  Web3 Explorer
+                <p className={`text-sm font-medium ${
+                  isCyberpunk 
+                    ? 'text-white cyberpunk-font' 
+                    : 'text-secondary-900'
+                }`}>
+                  {isCyberpunk ? 'BIT AI ASSISTANT' : 'bitAI Assistant'}
                 </p>
-                <p className="text-xs text-secondary-500 truncate">
-                  Discover the decentralized web
+                <p className={`text-xs truncate ${
+                  isCyberpunk 
+                    ? 'text-white/70 cyberpunk-font' 
+                    : 'text-secondary-500'
+                }`}>
+                  {isCyberpunk 
+                    ? 'Your Web3 AI companion' 
+                    : 'Your Web3 AI assistant'}
                 </p>
               </div>
             )}
@@ -222,4 +261,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onExpandedChange }) => {
       </div>
     </div>
   );
-};
+});
+
+Sidebar.displayName = 'Sidebar';

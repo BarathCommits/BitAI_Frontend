@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
-import { useBuiltInWallet } from '../hooks/useBuiltInWallet';
+// import { useBuiltInWallet } from '../hooks/useBuiltInWallet'; // Commented out for MVP - to be released later
 import { useTheme } from '../hooks/useTheme';
 import { 
   MessageSquare, 
@@ -10,36 +10,41 @@ import {
   Zap, 
   Shield, 
   Globe,
-  ArrowRight,
+  // ArrowRight, // Commented out - not used in MVP
   Users,
   Star
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  // Wallet connection status
-  const { connectedWallets } = useBuiltInWallet();
+  // Wallet connection status - Commented out for MVP - to be released later
+  // const { connectedWallets } = useBuiltInWallet();
   const { theme, isCyberpunk } = useTheme();
   const features = [
     {
       icon: MessageSquare,
-      title: 'AI Chat Assistant',
-      description: 'Get instant help with Web3 operations through our hybrid AI system.',
+      title: 'bitAI Chat Assistant',
+      description: 'A True Native Web 3 AI assistant that delivers results from web 3 landscape',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
+      isAvailable: true,
     },
     {
       icon: Store,
-      title: 'Bit AppStore',
+      title: 'bitAppStore',
       description: 'Discover and upload secure decentralized applications.',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+      isAvailable: false,
+      comingSoon: true,
     },
     {
       icon: Shield,
-      title: 'Safe Vault',
+      title: 'bitVault',
       description: 'Securely store your personal information with end-to-end encryption.',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
+      isAvailable: false,
+      comingSoon: true,
     },
     {
       icon: Globe,
@@ -47,6 +52,8 @@ export const HomePage: React.FC = () => {
       description: 'Navigate the decentralized web with confidence and security.',
       color: 'text-red-600',
       bgColor: 'bg-red-50',
+      isAvailable: false,
+      comingSoon: true,
     },
   ];
 
@@ -98,7 +105,7 @@ export const HomePage: React.FC = () => {
               ? 'cyberpunk-font cyberpunk-gradient-text cyberpunk-text-glow' 
               : 'text-secondary-900'
           }`}>
-            {isCyberpunk ? 'SAFE AI THE FUTURE OF WEB3' : 'Welcome to the Future of Web3'}
+            {isCyberpunk ? 'BIT AI THE FUTURE OF WEB3' : 'Welcome to the Future of Web3'}
           </h1>
           <p className={`text-xl mb-8 max-w-2xl mx-auto ${
             isCyberpunk 
@@ -111,7 +118,7 @@ export const HomePage: React.FC = () => {
             }
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/">
+            <Link to="/chat">
               <Button size="lg" className={`transition-all duration-300 ${
                 isCyberpunk ? 'cyberpunk-button' : ''
               }`}>
@@ -119,16 +126,20 @@ export const HomePage: React.FC = () => {
                 {isCyberpunk ? 'INITIATE SAFE CHAT' : 'Start AI Chat'}
               </Button>
             </Link>
-            <Link to="/safe-store">
-              <Button variant="outline" size="lg" className={`transition-all duration-300 ${
+            <Button 
+              variant="outline" 
+              size="lg" 
+              disabled
+              className={`transition-all duration-300 opacity-60 cursor-not-allowed ${
                 isCyberpunk 
-                  ? 'cyberpunk-button border-green-400/50 text-green-400 hover:border-green-400 hover:text-white' 
+                  ? 'cyberpunk-button border-green-400/30 text-green-400/50' 
                   : ''
-              }`}>
-                <Store className="w-5 h-5 mr-2" />
-                {isCyberpunk ? 'ACCESS BIT APPSTORE' : 'Explore Bit AppStore'}
-              </Button>
-            </Link>
+              }`}
+            >
+              <Store className="w-5 h-5 mr-2" />
+              {isCyberpunk ? 'ACCESS BIT APPSTORE' : 'Explore bitAppStore'}
+              <span className="ml-2 text-xs">(Coming Soon)</span>
+            </Button>
           </div>
         </div>
       </section>
@@ -198,15 +209,19 @@ export const HomePage: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature) => (
-            <Card key={feature.title} hover className={`text-center transition-all duration-500 ${
-              isCyberpunk ? 'cyberpunk-card' : ''
-            }`}>
+            <Card 
+              key={feature.title} 
+              hover={feature.isAvailable}
+              className={`text-center transition-all duration-500 ${
+                isCyberpunk ? 'cyberpunk-card' : ''
+              } ${!feature.isAvailable ? 'opacity-75' : ''}`}
+            >
               <CardContent className="pt-6">
                 <div className={`w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
                   isCyberpunk 
                     ? 'cyberpunk-gradient-bg cyberpunk-text-glow' 
                     : feature.bgColor
-                }`}>
+                } ${!feature.isAvailable ? 'opacity-60' : ''}`}>
                   <feature.icon className={`w-8 h-8 ${
                     isCyberpunk 
                       ? 'text-white' 
@@ -219,6 +234,15 @@ export const HomePage: React.FC = () => {
                     : 'text-secondary-900'
                 }`}>
                   {feature.title}
+                  {feature.comingSoon && (
+                    <span className={`ml-2 text-xs font-normal ${
+                      isCyberpunk 
+                        ? 'text-green-400 cyberpunk-font' 
+                        : 'text-primary-600'
+                    }`}>
+                      (Coming Soon)
+                    </span>
+                  )}
                 </h3>
                 <p className={`text-sm ${
                   isCyberpunk 
@@ -233,47 +257,87 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Popular dApps Section */}
+      {/* Popular dApps Section - Commented out for MVP - to be released later */}
+      {/* 
       <section>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-secondary-900 mb-2">
-              Popular dApps
+            <h2 className={`text-3xl font-bold mb-2 ${
+              isCyberpunk 
+                ? 'cyberpunk-font cyberpunk-gradient-text cyberpunk-text-glow' 
+                : 'text-secondary-900'
+            }`}>
+              {isCyberpunk ? 'POPULAR DAPPS' : 'Popular dApps'}
             </h2>
-            <p className="text-secondary-600">
-              Discover the most trusted decentralized applications
+            <p className={`${
+              isCyberpunk 
+                ? 'text-white/80 cyberpunk-font' 
+                : 'text-secondary-600'
+            }`}>
+              {isCyberpunk 
+                ? 'Discover the most trusted decentralized applications' 
+                : 'Discover the most trusted decentralized applications'}
             </p>
           </div>
-          <Link to="/safe-store">
-            <Button variant="outline">
-              View All
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            disabled
+            className={`opacity-60 cursor-not-allowed ${
+              isCyberpunk 
+                ? 'cyberpunk-button border-green-400/30 text-green-400/50' 
+                : ''
+            }`}
+          >
+            View All
+            <span className="ml-2 text-xs">(Coming Soon)</span>
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {recentDApps.map((dapp) => (
-            <Card key={dapp.name} hover>
+            <Card 
+              key={dapp.name} 
+              hover={false}
+              className={`opacity-75 ${
+                isCyberpunk ? 'cyberpunk-card' : ''
+              }`}
+            >
               <CardHeader>
                 <div className="flex items-center space-x-3">
-                  <div className="text-2xl">{dapp.logo}</div>
+                  <div className="text-2xl opacity-60">{dapp.logo}</div>
                   <div>
-                    <h3 className="font-semibold text-secondary-900">
+                    <h3 className={`font-semibold ${
+                      isCyberpunk 
+                        ? 'cyberpunk-font text-white' 
+                        : 'text-secondary-900'
+                    }`}>
                       {dapp.name}
                     </h3>
-                    <p className="text-sm text-secondary-600">
+                    <p className={`text-sm ${
+                      isCyberpunk 
+                        ? 'text-white/60' 
+                        : 'text-secondary-600'
+                    }`}>
                       {dapp.category}
                     </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-secondary-600 text-sm mb-4">
+                <p className={`text-sm mb-4 ${
+                  isCyberpunk 
+                    ? 'text-white/70' 
+                    : 'text-secondary-600'
+                }`}>
                   {dapp.description}
                 </p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 text-sm text-secondary-500">
+                  <div className={`flex items-center space-x-4 text-sm ${
+                    isCyberpunk 
+                      ? 'text-white/50' 
+                      : 'text-secondary-500'
+                  }`}>
                     <span className="flex items-center">
                       <Users className="w-4 h-4 mr-1" />
                       {dapp.users}
@@ -283,8 +347,13 @@ export const HomePage: React.FC = () => {
                       {dapp.rating}
                     </span>
                   </div>
-                  <Button size="sm" variant="outline">
-                    Connect
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    disabled
+                    className="opacity-50 cursor-not-allowed"
+                  >
+                    Coming Soon
                   </Button>
                 </div>
               </CardContent>
@@ -292,6 +361,7 @@ export const HomePage: React.FC = () => {
           ))}
         </div>
       </section>
+      */}
 
       {/* CTA Section */}
       <section className={`rounded-lg p-8 text-center text-white transition-all duration-500 ${

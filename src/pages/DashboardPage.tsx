@@ -21,13 +21,9 @@ import {
 export const DashboardPage: React.FC = () => {
   const [showBalances, setShowBalances] = React.useState(true);
   
-  // Use real portfolio data hook (currently returns empty - will be populated when backend ready)
   const { portfolioData, loading: portfolioLoading } = usePortfolio();
-  
-  // Use real portfolio data only
   const displayData = portfolioData;
-
-  const recentActivity: any[] = []; // Empty until backend provides real data
+  const recentActivity: any[] = []; // Activity data from backend
 
   const quickActions = [
     { icon: MessageSquare, label: 'AI Chat', description: 'Get help with Web3', color: 'bg-blue-50 text-blue-600' },

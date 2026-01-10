@@ -1,8 +1,21 @@
+/**
+ * Barcode Component
+ * 
+ * Displays QR codes or barcodes with:
+ * - QR code generation using qrcode library
+ * - Barcode generation using jsbarcode library
+ * - Download functionality
+ * - Copy to clipboard
+ * - Show/hide data toggle
+ * 
+ * Used in VaultPage for generating QR codes for vault data.
+ */
 import React, { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { Button } from './Button';
 import { Card, CardHeader, CardContent } from './Card';
+import { logger } from '../../utils/logger';
 import { 
   Download, 
   Copy, 
@@ -43,7 +56,9 @@ export const Barcode: React.FC<BarcodeProps> = ({
             dark: '#1f2937',
             light: '#ffffff'
           }
-        }).catch(console.error);
+        }).catch((error) => {
+          logger.error('QR code generation error:', error);
+        });
       } else if (type === 'barcode' && barcodeRef.current) {
         try {
           JsBarcode(barcodeRef.current, data, {
@@ -57,7 +72,7 @@ export const Barcode: React.FC<BarcodeProps> = ({
             lineColor: '#1f2937'
           });
         } catch (error) {
-          console.error('Barcode generation error:', error);
+          logger.error('Barcode generation error:', error);
         }
       }
     }
@@ -95,7 +110,7 @@ export const Barcode: React.FC<BarcodeProps> = ({
       await navigator.clipboard.writeText(data);
       // You could add a toast notification here
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   };
 

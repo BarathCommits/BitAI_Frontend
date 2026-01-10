@@ -18,6 +18,7 @@ const validateEnv = () => {
 validateEnv();
 
 // Base URL - API Gateway routes to microservices
+// Browser uses localhost, Docker container would use host.docker.internal if needed
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
 
 // Multi-chain wallet support constants
@@ -95,7 +96,16 @@ export const API_CONFIG = {
       LIST: '/wallet/list',
       DISCONNECT: '/wallet/disconnect',
       VERIFY: '/wallet/verify',
-      HEALTH: '/wallet/health'
+      HEALTH: '/wallet/health',
+      // Wallet API endpoints (direct wallet service)
+      BALANCE: '/api/v1/wallet/balance',
+      PORTFOLIO: '/api/v1/wallet/portfolio',
+      SWAP_QUOTE: '/api/v1/wallet/swap/quote',
+      SWAP_EXECUTE: '/api/v1/wallet/swap/execute',
+      SWAP_STATUS: '/api/v1/wallet/swap',
+      TRANSFER: '/api/v1/wallet/transfer',
+      ONRAMP: '/api/v1/wallet/onramp',
+      OFFRAMP: '/api/v1/wallet/offramp',
     },
     
     // Portfolio Management (Wallet Service - Port 3003)

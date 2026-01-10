@@ -196,7 +196,27 @@ export type TransactionType =
   | 'approve' 
   | 'contract_interaction';
 
-export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
+export type TransactionStatus = 'pending' | 'confirmed' | 'failed' | 'signing' | 'sent';
+
+// Function calling transaction data from AI responses
+export interface FunctionCallTransaction {
+  id: string;
+  type: 'solana' | 'ethereum';
+  operation: string; // e.g., 'transfer', 'swap', 'stake', etc.
+  rawTransaction?: string; // Base64 encoded transaction for Solana, hex for Ethereum
+  transactionData?: {
+    from?: string;
+    to?: string;
+    amount?: string;
+    token?: string;
+    contractAddress?: string;
+    functionName?: string;
+    parameters?: Record<string, any>;
+  };
+  description?: string;
+  estimatedFee?: string;
+  requiresSigning: boolean;
+}
 
 export interface Analytics {
   userMetrics: UserMetrics;

@@ -73,7 +73,7 @@ export const SettingsPage: React.FC = () => {
                     {walletAddress}
                   </code>
                   <p className="text-xs text-primary-700 mt-1">
-                    Your wallet address is your identity in Safe Browser. This cannot be changed.
+                    Your wallet address is your identity in BitAI Browser. This cannot be changed.
                   </p>
                 </div>
               </div>

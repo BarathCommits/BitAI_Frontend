@@ -1,9 +1,17 @@
 /**
  * Built-in Wallet Selector Component
  * 
- * A native wallet selector that shows all built-in wallets without requiring extensions
+ * A native wallet selector that shows all built-in wallets without requiring extensions.
+ * 
+ * Features:
+ * - Lists all available Solana wallets
+ * - Connect/disconnect functionality
+ * - Connection status display
+ * - Wallet refresh capability
+ * - Error handling with user feedback
+ * 
+ * Used in Header.tsx for wallet connection modal.
  */
-
 import React, { useState } from 'react';
 import { useBuiltInWallet } from '../../hooks/useBuiltInWallet';
 import { BuiltInWalletInfo } from '../../services/BuiltInWalletService';
@@ -11,6 +19,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Wallet, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface BuiltInWalletSelectorProps {
   onWalletConnected?: (wallet: BuiltInWalletInfo) => void;
@@ -43,7 +52,7 @@ export const BuiltInWalletSelector: React.FC<BuiltInWalletSelectorProps> = ({
 
     // Prevent multiple connection attempts
     if (connectingWallet) {
-      console.log('⚠️ Connection already in progress');
+      logger.warn('⚠️ Connection already in progress');
       return;
     }
 
@@ -64,10 +73,10 @@ export const BuiltInWalletSelector: React.FC<BuiltInWalletSelectorProps> = ({
         onClose?.();
       } else {
         // Show error message
-        console.error('Connection failed:', result.error);
+        logger.error('Connection failed:', result.error);
       }
     } catch (err) {
-      console.error('Failed to connect wallet:', err);
+      logger.error('Failed to connect wallet:', err);
       // Force clear loading state
       setConnectingWallet(null);
     } finally {

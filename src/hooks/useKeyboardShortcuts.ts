@@ -1,3 +1,15 @@
+/**
+ * Keyboard Shortcuts Hook
+ * 
+ * Provides global keyboard shortcuts for navigation.
+ * 
+ * Shortcuts:
+ * - Cmd/Ctrl + Shift + A: Navigate to AI Chat
+ * - Cmd/Ctrl + Shift + V: Navigate to Vault
+ * - Cmd/Ctrl + Shift + H: Navigate to Home
+ * 
+ * Used in App.tsx for global keyboard navigation.
+ */
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -24,12 +36,12 @@ export const useKeyboardShortcuts = () => {
         toast.success('Vault opened');
       }
 
-      // Cmd/Ctrl + Shift + D: Navigate to dApp Store
-      if (modKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        navigate('/safe-store');
-        toast.success('dApp Store opened');
-      }
+      // Cmd/Ctrl + Shift + D: Navigate to dApp Store (Non-MVP - commented out)
+      // if (modKey && e.shiftKey && e.key === 'D') {
+      //   e.preventDefault();
+      //   navigate('/bit-store');
+      //   toast.success('dApp Store opened');
+      // }
 
       // Cmd/Ctrl + Shift + H: Navigate to Home
       if (modKey && e.shiftKey && e.key === 'H') {

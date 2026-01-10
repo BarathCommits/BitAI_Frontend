@@ -76,7 +76,7 @@ module.exports = function override(config, env) {
   // Add error handling for chunk loading failures
   config.output = {
     ...config.output,
-    chunkLoadingGlobal: 'webpackChunkSafeAI',
+    chunkLoadingGlobal: 'webpackChunkBitAI',
     globalObject: 'self',
   };
 

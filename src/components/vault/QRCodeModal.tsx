@@ -1,11 +1,18 @@
 /**
  * QR Code Modal Component
- * Displays QR codes for vault items and master vault
+ * 
+ * Displays QR codes for vault items and master vault with:
+ * - QR code display
+ * - Download functionality
+ * - Copy data to clipboard
+ * - Expiry date display
+ * 
+ * Used in VaultPage for displaying QR codes of vault data.
  */
-
 import React, { useState, useEffect } from 'react';
 import { X, Download, Copy, QrCode } from 'lucide-react';
 import { QRCodeData } from '../../utils/qrGenerator';
+import { logger } from '../../utils/logger';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -46,7 +53,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error('Failed to download QR code:', error);
+      logger.error('Failed to download QR code:', error);
     }
   };
 
@@ -56,14 +63,20 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
     try {
       await navigator.clipboard.writeText(qrData.data);
       // You could add a toast notification here
-      console.log('QR code data copied to clipboard');
+      logger.debug('QR code data copied to clipboard');
     } catch (error) {
-      console.error('Failed to copy QR code data:', error);
+      logger.error('Failed to copy QR code data:', error);
     }
   };
 
-  const formatExpiryDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatExpiryDate = (date: Date | string | undefined) => {
+    if (!date) return 'Never';
+    
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    if (isNaN(dateObj.getTime())) return 'Invalid date';
+    
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -125,12 +138,14 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
                   </p>
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Expires:</label>
-                  <p className="text-sm text-gray-600">
-                    {formatExpiryDate(qrData.expiresAt)}
-                  </p>
-                </div>
+                {qrData.metadata?.expiresAt && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Expires:</label>
+                    <p className="text-sm text-gray-600">
+                      {formatExpiryDate(qrData.metadata.expiresAt)}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

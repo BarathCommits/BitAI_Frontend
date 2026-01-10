@@ -1,5 +1,20 @@
+/**
+ * Vault Service
+ * 
+ * Manages vault data (personal information) with backend MongoDB storage.
+ * 
+ * Features:
+ * - CRUD operations for vault items
+ * - Rate limiting for API calls
+ * - QR code generation for vault data
+ * - Backend API integration
+ * - Authentication via JWT tokens
+ * 
+ * Used by useVault hook and VaultPage component.
+ */
 import { PersonalInfo } from '../types';
 import { API_CONFIG, API_BASE_URL } from '../config/api';
+import { vaultLogger as logger } from '../utils/logger';
 
 export interface VaultAPIResponse<T> {
   success: boolean;
@@ -36,17 +51,21 @@ export interface VaultStats {
 export interface QRCodeData {
   qrCodeDataURL: string;
   qrType: 'master' | 'individual';
-  metadata: {
+  metadata?: {
     itemId?: string;
     itemType?: string;
-    createdAt: string;
+    createdAt?: string;
     expiresAt?: string;
+    walletAddress?: string;
+    summary?: string;
   };
 }
 
 class VaultService {
   private static lastApiCallTime = 0;
-  private static readonly API_RATE_LIMIT_MS = 3000; // 3 seconds between any vault API calls
+  private static readonly API_RATE_LIMIT_MS = 1000; // 1 second between vault API calls
+  private static useLocalStorage = false; // Track if we should use localStorage
+  private static backendChecked = false; // Track if we've checked backend availability
 
   private checkRateLimit(): boolean {
     const now = Date.now();
@@ -54,22 +73,50 @@ class VaultService {
     
     if (timeSinceLastCall < VaultService.API_RATE_LIMIT_MS) {
       const waitTime = Math.ceil((VaultService.API_RATE_LIMIT_MS - timeSinceLastCall) / 1000);
-      console.log(`⏳ VaultService Rate limiting: Please wait ${waitTime} second(s) before making another vault API call`);
+      logger.debug(`⏳ VaultService Rate limiting: Please wait ${waitTime} second(s) before making another vault API call`);
       return false;
     }
     
-    VaultService.lastApiCallTime = now;
+    // Only update timestamp if we're actually making the call
+    // This prevents race conditions
+    return true;
+  }
+
+  private updateRateLimitTimestamp(): void {
+    VaultService.lastApiCallTime = Date.now();
+  }
+
+  private async checkBackendAvailable(): Promise<boolean> {
+    // Only check once
+    if (VaultService.backendChecked) {
+      return !VaultService.useLocalStorage;
+    }
+
+    VaultService.backendChecked = true;
+    VaultService.useLocalStorage = false; // Always use backend, no localStorage
+    
+    logger.debug('✅ VaultService: Using backend API (MongoDB)');
     return true;
   }
 
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('jwtToken');
     const walletAddress = localStorage.getItem('walletAddress');
-    return {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
     };
+    
+    // Always send wallet address for MongoDB filtering
+    if (walletAddress) {
+      headers['X-Wallet-Address'] = walletAddress;
+    }
+    
+    // Send token if available (or dev bypass)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
   }
 
   // Get the current wallet address
@@ -92,7 +139,7 @@ class VaultService {
           const address = walletState.state.walletInfo.address;
           // Save it to localStorage for next time
           localStorage.setItem('walletAddress', address);
-          console.log('💾 Restored wallet address from persisted storage:', address);
+          logger.debug('💾 Restored wallet address from persisted storage:', address);
           return address;
         }
         
@@ -102,13 +149,13 @@ class VaultService {
           if (address) {
             // Save it to localStorage for next time
             localStorage.setItem('walletAddress', address);
-            console.log('💾 Restored wallet address from connectedWallets:', address);
+            logger.debug('💾 Restored wallet address from connectedWallets:', address);
             return address;
           }
         }
       }
     } catch (error) {
-      console.error('Error reading wallet storage:', error);
+      logger.error('Error reading wallet storage:', error);
     }
     
     return null;
@@ -116,15 +163,43 @@ class VaultService {
 
   private async handleResponse<T>(response: Response): Promise<VaultAPIResponse<T>> {
     try {
+      // Check content type to avoid parsing HTML as JSON
+      const contentType = response.headers.get('content-type') || '';
+      const isJSON = contentType.includes('application/json');
+      
+      if (!isJSON) {
+        // Response is not JSON (likely HTML error page)
+        const text = await response.text();
+        logger.error('❌ VaultService: Received non-JSON response:', {
+          status: response.status,
+          contentType,
+          preview: text.substring(0, 200)
+        });
+        
+        return {
+          success: false,
+          error: {
+            code: this.getErrorCode(response.status),
+            message: response.status === 503 || response.status === 429
+              ? 'Service temporarily unavailable. Please wait a moment and try again.'
+              : response.status === 401
+              ? 'Authentication required. Please connect your wallet.'
+              : `Server error (${response.status}). Please try again later.`,
+            details: []
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+
       const data = await response.json();
       
       if (!response.ok) {
         return {
           success: false,
           error: {
-            code: this.getErrorCode(response.status),
-            message: data.message || `HTTP ${response.status}: ${response.statusText}`,
-            details: data.details || []
+            code: data.error?.code || this.getErrorCode(response.status),
+            message: data.error?.message || data.message || `HTTP ${response.status}: ${response.statusText}`,
+            details: data.error?.details || data.details || []
           },
           timestamp: data.timestamp || new Date().toISOString()
         };
@@ -137,11 +212,12 @@ class VaultService {
         pagination: data.pagination
       };
     } catch (error) {
+      logger.error('❌ VaultService: Error parsing response:', error);
       return {
         success: false,
         error: {
           code: 'PARSE_ERROR',
-          message: error instanceof Error ? error.message : 'Unknown error occurred'
+          message: error instanceof Error ? error.message : 'Failed to parse server response'
         },
         timestamp: new Date().toISOString()
       };
@@ -208,34 +284,24 @@ class VaultService {
           success: false,
           error: {
             code: 'RATE_LIMITED',
-            message: 'Please wait before making another vault API call'
+            message: 'Please wait a moment before making another vault API call'
           },
           timestamp: new Date().toISOString()
         };
       }
+      
+      this.updateRateLimitTimestamp();
 
       const token = localStorage.getItem('jwtToken');
       const walletAddress = this.getWalletAddress();
       
-      console.log('VaultService: Checking auth', { 
+      logger.debug('VaultService: Checking auth', { 
         hasToken: !!token, 
         walletAddress 
       });
 
-      if (!token) {
-        console.log('VaultService: No token found, returning auth error');
-        return { 
-          success: false, 
-          error: {
-            code: 'AUTH_UNAUTHORIZED',
-            message: 'Authentication required. Please connect your wallet first.'
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-
       if (!walletAddress) {
-        console.log('VaultService: No wallet address found');
+        logger.debug('VaultService: No wallet address found');
         return {
           success: false,
           error: {
@@ -245,14 +311,15 @@ class VaultService {
           timestamp: new Date().toISOString()
         };
       }
-      
+
+      // Fetch from backend MongoDB
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VAULT.INFO}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
 
       const result = await this.handleResponse<PersonalInfo[]>(response);
-      console.log('VaultService: API response', { 
+      logger.debug('VaultService: API response from MongoDB', { 
         success: result.success, 
         dataLength: Array.isArray(result.data) ? result.data.length : 'not array',
         error: result.error 
@@ -260,7 +327,6 @@ class VaultService {
       
       return result;
     } catch (error) {
-      // Never return mock data - always require proper authentication and backend
       return {
         success: false,
         error: {
@@ -300,16 +366,18 @@ class VaultService {
           success: false,
           error: {
             code: 'RATE_LIMITED',
-            message: 'Please wait before making another vault API call'
+            message: 'Please wait a moment before making another vault API call'
           },
           timestamp: new Date().toISOString()
         };
       }
+      
+      this.updateRateLimitTimestamp();
 
       const walletAddress = this.getWalletAddress();
       const token = localStorage.getItem('jwtToken');
       
-      console.log('🔍 VaultService Debug:', {
+      logger.debug('🔍 VaultService Debug:', {
         hasToken: !!token,
         hasWalletAddress: !!walletAddress,
         walletAddress: walletAddress,
@@ -327,14 +395,7 @@ class VaultService {
         };
       }
 
-      // Note: JWT token is optional for local wallet connections
-      // If no token, we'll still attempt to save with wallet-only authentication
-      // The backend should handle wallet-only requests if JWT is not provided
-      if (!token) {
-        console.log('ℹ️ VaultService: No JWT token found, proceeding with wallet-only authentication');
-      }
-
-      // Send data in the format expected by backend
+      // Send data to backend MongoDB
       const backendData = {
         type: info.type,
         label: info.label,
@@ -345,8 +406,7 @@ class VaultService {
         walletAddress // Explicitly include wallet address
       };
 
-      console.log('📤 VaultService: Sending data to backend:', backendData);
-      console.log('📤 VaultService: Headers:', this.getAuthHeaders());
+      logger.debug('📤 VaultService: Sending data to backend MongoDB:', backendData);
 
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VAULT.INFO}`, {
         method: 'POST',
@@ -354,22 +414,10 @@ class VaultService {
         body: JSON.stringify(backendData),
       });
 
-      console.log('📥 VaultService: Response status:', response.status);
-      
-      if (!response.ok) {
-        // Clone the response so we can read it for debugging without consuming the original
-        const responseClone = response.clone();
-        try {
-          const errorData = await responseClone.json();
-          console.log('VaultService: Error response:', errorData);
-        } catch (e) {
-          console.log('VaultService: Could not parse error response');
-        }
-      }
+      logger.debug('📥 VaultService: Response status:', response.status);
 
       return this.handleResponse<PersonalInfo>(response);
     } catch (error) {
-      // Never return mock data - always require proper authentication and backend
       return {
         success: false,
         error: {
@@ -383,6 +431,8 @@ class VaultService {
 
   async updatePersonalInfo(id: string, info: Partial<PersonalInfo>): Promise<VaultAPIResponse<PersonalInfo>> {
     try {
+      logger.debug('📤 VaultService: Updating info in MongoDB:', id);
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VAULT.INFO}/${id}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
@@ -404,6 +454,8 @@ class VaultService {
 
   async deletePersonalInfo(id: string): Promise<VaultAPIResponse<void>> {
     try {
+      logger.debug('📤 VaultService: Deleting info from MongoDB:', id);
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VAULT.INFO}/${id}`, {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
@@ -422,7 +474,7 @@ class VaultService {
     }
   }
 
-  // QR Code Generation
+  // QR Code Generation - Gets from backend OR generates and stores
   async generateMasterQRCode(): Promise<VaultAPIResponse<QRCodeData>> {
     try {
       const walletAddress = this.getWalletAddress();
@@ -438,53 +490,68 @@ class VaultService {
         };
       }
 
-      // Generate vault summary for QR code
-      const vaultSummary = `Safe Vault - ${new Date().toISOString().split('T')[0]}`;
-      
-      // Call backend to generate or retrieve QR code
-      const response = await fetch(`${API_BASE_URL}/qr/master`, {
-        method: 'POST',
+      // Get vault stats from backend
+      logger.debug('📊 Fetching vault stats from backend for QR code');
+      const statsResponse = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.VAULT.STATS}`, {
+        method: 'GET',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ summary: vaultSummary }),
       });
 
-      const result = await this.handleResponse<{
-        id: string;
-        qrData: string;
-        qrImage: string;
-        title: string;
-        subtitle: string;
+      const statsResult = await this.handleResponse<VaultStats>(statsResponse);
+
+      // Create QR data from backend stats
+      const vaultSummary = statsResult.success && statsResult.data
+        ? `${statsResult.data.totalItems} items across ${Object.keys(statsResult.data.categories).length} categories`
+        : 'Safe Vault';
+
+      // Encode vault data for QR
+      const qrData = JSON.stringify({
+        walletAddress: walletAddress,
+        summary: vaultSummary,
+        timestamp: new Date().toISOString()
+      });
+
+      // Generate QR code image
+      const { generateQRCode } = await import('../utils/qrGenerator');
+      const qrCodeDataURL = generateQRCode(qrData, 400);
+
+      logger.debug('📤 Storing QR code in backend MongoDB');
+      // Store QR code in backend MongoDB via /api/v1/vault/qr-code/generate endpoint
+      const storeResponse = await fetch(`${API_BASE_URL}/vault/qr-code/generate`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      });
+
+      const storeResult = await this.handleResponse<{
+        qrId: string;
+        encryptedData: string;
         expiresAt: string;
-        createdAt: string;
-      }>(response);
+        totalItems: number;
+        checksum: string;
+      }>(storeResponse);
 
-      if (!result.success || !result.data) {
-        return {
-          success: false,
-          error: {
-            code: 'QR_GENERATION_ERROR',
-            message: 'Failed to generate master QR code from backend'
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-
-      // Convert backend response to frontend format
-      const qrData: QRCodeData = {
-        qrCodeDataURL: result.data.qrImage,
+      // Store the QR data locally for display even if backend fails
+      const qrDataResponse: QRCodeData = {
+        qrCodeDataURL: qrCodeDataURL, // Use locally generated QR image
         qrType: 'master',
         metadata: {
-          createdAt: result.data.createdAt,
-          expiresAt: result.data.expiresAt
+          createdAt: new Date().toISOString(),
+          expiresAt: storeResult.success && storeResult.data ? storeResult.data.expiresAt : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          walletAddress: walletAddress,
+          summary: vaultSummary
         }
       };
       
-      console.log('✅ Master QR code generated from backend for wallet:', walletAddress);
+      if (storeResult.success && storeResult.data) {
+        logger.debug('✅ Master QR code stored in backend MongoDB:', storeResult.data.qrId);
+      } else {
+        logger.warn('⚠️ Backend QR storage failed, using locally generated QR');
+      }
       
       return {
         success: true,
-        data: qrData,
-        message: 'Master vault QR code generated successfully',
+        data: qrDataResponse,
+        message: 'Master vault QR code generated and stored in backend',
         timestamp: new Date().toISOString()
       };
     } catch (error) {

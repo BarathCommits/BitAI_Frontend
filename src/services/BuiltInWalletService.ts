@@ -1,12 +1,20 @@
 /**
- * Built-in Wallet Service for Safe
+ * Built-in Wallet Service
  * 
- * This service provides access to built-in wallet functionality.
- * It now delegates to the UnifiedWalletService to avoid duplication.
+ * Provides access to built-in wallet functionality.
+ * Delegates to UnifiedWalletService to avoid duplication.
+ * 
+ * Features:
+ * - Get available wallets
+ * - Connect/disconnect wallets
+ * - Wallet state management
+ * - Listener pattern for wallet changes
+ * 
+ * Used by useBuiltInWallet hook and wallet components.
  */
-
 import { unifiedWalletService } from './UnifiedWalletService';
 import { useWalletStore } from '../store/walletStore';
+import { logger } from '../utils/logger';
 
 // Define types locally to avoid circular imports
 export interface BuiltInWalletInfo {
@@ -75,7 +83,7 @@ export class BuiltInWalletService {
       }, 100);
     } else if (!result.success) {
       // If connection failed, make sure to clear loading state
-      console.log('❌ Wallet connection failed:', result.error);
+      logger.error('❌ Wallet connection failed:', result.error);
     }
     
     return {

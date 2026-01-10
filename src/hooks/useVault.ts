@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { PersonalInfo, VaultStats, QRCodeData } from '../types';
 import { vaultService, VaultAPIResponse } from '../services/VaultService';
 import { notificationService } from '../services/NotificationService';
+import { analyticsService } from '../services/AnalyticsService';
+import { APP_CONFIG } from '../constants/app';
+import { vaultLogger } from '../utils/logger';
 
 export interface UseVaultReturn {
   // State
@@ -39,14 +42,15 @@ export const useVault = (): UseVaultReturn => {
   const isLoadingRef = useRef(false);
   const lastLoadTimeRef = useRef(0);
   const retryCountRef = useRef(0);
-  const VAULT_RATE_LIMIT_MS = 5000; // 5 seconds between vault API calls (increased)
-  const MAX_RETRIES = 3;
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const VAULT_RATE_LIMIT_MS = APP_CONFIG.VAULT.RATE_LIMIT_MS;
+  const MAX_RETRIES = APP_CONFIG.VAULT.MAX_RETRIES;
 
   // Load initial data with better rate limiting
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads using ref
     if (isLoadingRef.current) {
-      console.log('Rate limiting: skipping data load - already loading');
+      vaultLogger.debug('Rate limiting: skipping data load - already loading');
       return;
     }
 
@@ -56,7 +60,7 @@ export const useVault = (): UseVaultReturn => {
     
     if (timeSinceLastLoad < VAULT_RATE_LIMIT_MS) {
       const waitTime = Math.ceil((VAULT_RATE_LIMIT_MS - timeSinceLastLoad) / 1000);
-      console.log(`⏳ Rate limiting: Please wait ${waitTime} second(s) before loading vault data again`);
+      vaultLogger.debug(`Rate limiting: Please wait ${waitTime} second(s) before loading vault data again`);
       return;
     }
 
@@ -64,16 +68,13 @@ export const useVault = (): UseVaultReturn => {
     const token = localStorage.getItem('jwtToken');
     const walletAddress = localStorage.getItem('walletAddress');
     
-    console.log('🔍 loadData called with:', { 
+    vaultLogger.debug('loadData called', { 
       hasToken: !!token, 
-      hasWalletAddress: !!walletAddress,
-      token: token ? 'present' : 'missing',
-      walletAddress: walletAddress || 'missing'
+      hasWalletAddress: !!walletAddress
     });
 
     if (!token || !walletAddress) {
-      console.log('❌ No auth token or wallet address found - cannot load vault data from backend');
-      console.log('⚠️ Requiring wallet authentication to access vault');
+      vaultLogger.warn('No auth token or wallet address found - cannot load vault data from backend');
       setPersonalInfo([]);
       setStats(null);
       isLoadingRef.current = false;
@@ -82,7 +83,7 @@ export const useVault = (): UseVaultReturn => {
       return;
     }
 
-    console.log('✅ Auth check passed - proceeding with data load');
+    vaultLogger.debug('Auth check passed - proceeding with data load');
     isLoadingRef.current = true;
     lastLoadTimeRef.current = now; // Update last load time
     setLoading(true);
@@ -90,42 +91,51 @@ export const useVault = (): UseVaultReturn => {
 
     try {
       // Load personal info first
-      console.log('🔄 useVault: Calling vaultService.getAllPersonalInfo()');
+      vaultLogger.debug('Calling vaultService.getAllPersonalInfo()');
       const infoResponse = await vaultService.getAllPersonalInfo();
-      console.log('🔄 useVault: Response from getAllPersonalInfo:', { 
+      vaultLogger.debug('Response from getAllPersonalInfo', { 
         success: infoResponse.success, 
         hasData: !!infoResponse.data,
-        dataType: typeof infoResponse.data,
-        dataLength: Array.isArray(infoResponse.data) ? infoResponse.data.length : 'not array',
-        error: infoResponse.error 
+        dataLength: Array.isArray(infoResponse.data) ? infoResponse.data.length : 0
       });
 
       if (infoResponse.success && infoResponse.data) {
-        console.log('✅ useVault: Setting personalInfo:', Array.isArray(infoResponse.data) ? `Array with ${infoResponse.data.length} items` : 'Not an array:', typeof infoResponse.data);
+        vaultLogger.info('Setting personalInfo', { count: Array.isArray(infoResponse.data) ? infoResponse.data.length : 0 });
         setPersonalInfo(infoResponse.data);
         retryCountRef.current = 0; // Reset retry count on success
+        
+        // Track vault access (read)
+        if (Array.isArray(infoResponse.data) && infoResponse.data.length > 0) {
+          analyticsService.trackVaultAccess('read');
+        }
       } else {
-        const errorMessage = typeof infoResponse.error === 'string' ? infoResponse.error : 
-                           ((infoResponse.error as any)?.message || 'Failed to load personal information');
-        console.log('❌ useVault: Error loading personal info:', errorMessage);
+        const errorMessage = typeof infoResponse.error === 'string' 
+          ? infoResponse.error 
+          : (infoResponse.error?.message || 'Failed to load personal information');
+        vaultLogger.error('Error loading personal info', errorMessage);
         
         // No local storage - require backend authentication
         if (infoResponse.error && infoResponse.error.code === 'AUTH_UNAUTHORIZED') {
-          console.log('❌ Backend authentication required - no local data fallback');
+          vaultLogger.warn('Backend authentication required - no local data fallback');
           setError('Wallet authentication required. Please reconnect your wallet.');
         }
         
         // Handle rate limiting errors specifically
         if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests') || errorMessage.includes('RATE_LIMITED')) {
-          console.log('⏳ Rate limited - will retry automatically');
+          vaultLogger.warn('Rate limited - will retry automatically');
           
           // Retry with exponential backoff
           if (retryCountRef.current < MAX_RETRIES) {
             retryCountRef.current++;
             const retryDelay = Math.pow(2, retryCountRef.current) * 1000; // 2s, 4s, 8s
-            console.log(`🔄 Retrying vault data load in ${retryDelay/1000} seconds (attempt ${retryCountRef.current}/${MAX_RETRIES})`);
+            vaultLogger.debug(`Retrying vault data load in ${retryDelay/1000} seconds (attempt ${retryCountRef.current}/${MAX_RETRIES})`);
             
-            setTimeout(() => {
+            // Clear any existing timeout
+            if (retryTimeoutRef.current) {
+              clearTimeout(retryTimeoutRef.current);
+            }
+            
+            retryTimeoutRef.current = setTimeout(() => {
               isLoadingRef.current = false;
               lastLoadTimeRef.current = 0; // Reset rate limiting for retry
               loadData();
@@ -133,7 +143,7 @@ export const useVault = (): UseVaultReturn => {
             
             return; // Don't set error state for rate limiting
           } else {
-            console.log('❌ Max retries reached for vault data load');
+            vaultLogger.error('Max retries reached for vault data load');
             setError('Unable to load vault data after multiple attempts. Please try again later.');
           }
         } else {
@@ -166,31 +176,36 @@ export const useVault = (): UseVaultReturn => {
 
   // Listen for wallet connection/disconnection events
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     const handleWalletChange = () => {
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
       // Add a small delay to ensure localStorage is fully updated
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         const token = localStorage.getItem('jwtToken');
         const walletAddress = localStorage.getItem('walletAddress');
         const walletStorage = localStorage.getItem('wallet-storage');
         
-        console.log('🔄 Vault: Wallet change detected', { 
+        vaultLogger.debug('Wallet change detected', { 
           hasToken: !!token, 
           hasWalletAddress: !!walletAddress,
-          hasWalletStorage: !!walletStorage,
-          token: token ? 'present' : 'missing',
-          walletAddress: walletAddress || 'missing'
+          hasWalletStorage: !!walletStorage
         });
         
         if (!token || !walletAddress || !walletStorage) {
           // Wallet disconnected - clear vault data immediately
-          console.log('🚫 Vault: Wallet disconnected - clearing vault data');
+          vaultLogger.info('Wallet disconnected - clearing vault data');
           setPersonalInfo([]);
           setStats(null);
           setIsInitialized(false);
           setError(null);
         } else {
           // Wallet connected - refresh vault data
-          console.log('✅ Vault: Wallet connected - refreshing vault data');
+          vaultLogger.info('Wallet connected - refreshing vault data');
           setIsInitialized(false);
           loadData();
         }
@@ -205,6 +220,10 @@ export const useVault = (): UseVaultReturn => {
     window.addEventListener('walletDisconnected', handleWalletChange);
 
     return () => {
+      // Clear timeout on cleanup
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       window.removeEventListener('storage', handleWalletChange);
       window.removeEventListener('walletConnected', handleWalletChange);
       window.removeEventListener('walletDisconnected', handleWalletChange);
@@ -214,6 +233,13 @@ export const useVault = (): UseVaultReturn => {
   // Load initial data on mount
   useEffect(() => {
     loadData();
+    
+    // Cleanup: clear any pending retry timeouts
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
   }, [loadData]);
 
   // Refresh data
@@ -224,7 +250,7 @@ export const useVault = (): UseVaultReturn => {
     
     if (timeSinceLastLoad < VAULT_RATE_LIMIT_MS) {
       const waitTime = Math.ceil((VAULT_RATE_LIMIT_MS - timeSinceLastLoad) / 1000);
-      console.log(`⏳ Rate limiting: Please wait ${waitTime} second(s) before refreshing vault data`);
+      vaultLogger.debug(`⏳ Rate limiting: Please wait ${waitTime} second(s) before refreshing vault data`);
       return;
     }
 
@@ -235,15 +261,15 @@ export const useVault = (): UseVaultReturn => {
 
   // Add personal information
   const addInfo = useCallback(async (info: Omit<PersonalInfo, 'id' | 'createdAt' | 'isEncrypted'>): Promise<boolean> => {
-    console.log('🔄 useVault: Adding info:', info);
+    vaultLogger.debug('🔄 useVault: Adding info:', info);
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔄 useVault: Calling vaultService.addPersonalInfo()');
+      vaultLogger.debug('🔄 useVault: Calling vaultService.addPersonalInfo()');
       const response = await vaultService.addPersonalInfo(info);
-      console.log('🔄 useVault: Response from addPersonalInfo:', { 
+      vaultLogger.debug('🔄 useVault: Response from addPersonalInfo:', { 
         success: response.success, 
         hasData: !!response.data,
         data: response.data,
@@ -251,7 +277,11 @@ export const useVault = (): UseVaultReturn => {
       });
       
       if (response.success && response.data) {
-        console.log('✅ useVault: Successfully added info, updating state');
+        vaultLogger.debug('✅ useVault: Successfully added info, updating state');
+        
+        // Track vault create activity
+        analyticsService.trackVaultAccess('create', response.data._id || response.data.id);
+        
         setPersonalInfo(prev => {
           // Check if this exact info already exists to prevent duplicates
           const exists = prev.some(item => 
@@ -259,7 +289,7 @@ export const useVault = (): UseVaultReturn => {
           );
           
           if (exists) {
-            console.log('ℹ️ Info already exists in state, skipping add');
+            vaultLogger.debug('ℹ️ Info already exists in state, skipping add');
             return prev;
           }
           
@@ -295,12 +325,12 @@ export const useVault = (): UseVaultReturn => {
           }
         }
         
-        console.error('❌ useVault: Failed to add info. Full error:', JSON.stringify(response.error, null, 2));
-        console.error('❌ useVault: Response:', JSON.stringify(response, null, 2));
+        vaultLogger.error('❌ useVault: Failed to add info. Full error:', JSON.stringify(response.error, null, 2));
+        vaultLogger.error('❌ useVault: Response:', JSON.stringify(response, null, 2));
         
         // No local storage fallback - all data must go to backend
         if (response.error && response.error.code === 'AUTH_UNAUTHORIZED') {
-          console.log('❌ Cannot save to vault - backend authentication required');
+          vaultLogger.warn('❌ Cannot save to vault - backend authentication required');
           const authErrorMessage = 'Please authenticate with your wallet to save vault data to the backend.';
           setError(authErrorMessage);
           notificationService.error('Authentication Required', authErrorMessage);
@@ -331,6 +361,9 @@ export const useVault = (): UseVaultReturn => {
       const response = await vaultService.updatePersonalInfo(id, info);
       
       if (response.success && response.data) {
+        // Track vault update activity
+        analyticsService.trackVaultAccess('update', id);
+        
         setPersonalInfo(prev => 
           prev.map(item => (item._id || item.id || item.infoId) === id ? response.data! : item)
         );
@@ -363,6 +396,9 @@ export const useVault = (): UseVaultReturn => {
       const response = await vaultService.deletePersonalInfo(id);
       
       if (response.success) {
+        // Track vault delete activity
+        analyticsService.trackVaultAccess('delete', id);
+        
         // Find the item being deleted to update stats
         const deletedItem = personalInfo.find(item => (item._id || item.id || item.infoId) === id);
         setPersonalInfo(prev => prev.filter(item => (item._id || item.id || item.infoId) !== id));
@@ -383,7 +419,7 @@ export const useVault = (): UseVaultReturn => {
       } else {
         // Handle case where item doesn't exist (404) - still remove from local state
         if (response.error && response.error.message && response.error.message.includes('not found')) {
-          console.log('Item not found in database, removing from local state');
+          vaultLogger.debug('Item not found in database, removing from local state');
           setPersonalInfo(prev => prev.filter(item => (item._id || item.id || item.infoId) !== id));
           return true; // Consider it successful since it's removed from local state
         }
@@ -518,10 +554,10 @@ export const useVault = (): UseVaultReturn => {
     const walletStorage = localStorage.getItem('wallet-storage');
     
     if (token && walletAddress && walletStorage) {
-      console.log('Vault: Initial load - wallet is connected');
+      vaultLogger.debug('Vault: Initial load - wallet is connected');
       loadData();
     } else {
-      console.log('Vault: Initial load - wallet not connected, skipping data load');
+      vaultLogger.debug('Vault: Initial load - wallet not connected, skipping data load');
       // Ensure vault is empty on initial load if wallet not connected
       setPersonalInfo([]);
       setStats(null);

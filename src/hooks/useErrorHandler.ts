@@ -1,3 +1,16 @@
+/**
+ * Error Handler Hook
+ * 
+ * Provides error handling utilities for React components.
+ * 
+ * Features:
+ * - Centralized error handling
+ * - Async error wrapping
+ * - Error context tracking
+ * - Severity levels
+ * 
+ * Used throughout the app for consistent error handling.
+ */
 import { useCallback } from 'react';
 import { errorHandler, ErrorContext, ErrorSeverity, AppError, ERROR_CODES } from '../utils/errorHandler';
 

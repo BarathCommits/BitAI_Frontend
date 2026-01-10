@@ -11,9 +11,11 @@ services:
     environment:
       - NODE_ENV=development
       # External Backend API Configuration (point to your separate backend)
-      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8080/api/v1}
+      - REACT_APP_API_URL=http://localhost:8080/api/v1
       - REACT_APP_AUTH_URL=${REACT_APP_AUTH_URL:-http://localhost:8080/api/auth}
       - REACT_APP_WS_URL=${REACT_APP_WS_URL:-ws://localhost:8080}
+      # Wallet Service API Configuration (Port 3003)
+      - REACT_APP_WALLET_SERVICE_URL=${REACT_APP_WALLET_SERVICE_URL:-http://localhost:3003}
       # Solana Backend API Configuration
       - REACT_APP_SOLANA_API_URL=http://localhost:3007
       - REACT_APP_AUTH_API_URL=${REACT_APP_AUTH_API_URL:-http://localhost:3000}

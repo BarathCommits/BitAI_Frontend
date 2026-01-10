@@ -1,17 +1,37 @@
+/**
+ * Vault Page Component
+ * 
+ * Personal information vault for storing encrypted data.
+ * 
+ * Features:
+ * - Store personal information (ID cards, passports, etc.)
+ * - QR code generation for vault data
+ * - AI provider configuration
+ * - Usage limits and subscription management
+ * - Wallet integration
+ * 
+ * Note: Currently commented out in routes (App.tsx) - not active in MVP.
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { logger } from '../utils/logger';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Barcode } from '../components/ui/Barcode';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { AIProviderSelector, AIProviderConfigModal, ConnectedWalletsList, APIUsageLimits, QRCodeModal } from '../components/vault';
+import { AIProviderSelector, AIProviderConfigModal, ConnectedWalletsList, APIUsageLimits, QRCodeModal, StripePaymentModal, UsageLimitBanner } from '../components/vault';
 import { useVault } from '../hooks/useVault';
 import { PersonalInfo } from '../types';
 import { useBuiltInWallet } from '../hooks/useBuiltInWallet';
 import { useTheme } from '../hooks/useTheme';
+// Audio components archived - VaultPage is currently commented out in routes
+// import { useCyberpunkAudio } from '../components/_archived/useCyberpunkAudio';
+// import { MusicPlayer } from '../components/_archived/MusicPlayer';
 import { authService } from '../services/AuthService';
 import { STORAGE_KEYS } from '../constants/storage';
+import { useUsageTracking } from '../hooks/useUsageTracking';
+import { usageTrackingService, SubscriptionStatus } from '../services/UsageTrackingService';
 import { 
   Shield, 
   User, 
@@ -52,8 +72,20 @@ export const VaultPage: React.FC = () => {
   const { theme, isCyberpunk, setTheme } = useTheme();
   const isWalletConnected = connectedWallets.length > 0;
   
+  // Audio system archived - VaultPage is currently commented out in routes
+  // const { playConnectionSound, playActionSound } = useCyberpunkAudio(isCyberpunk, {
+  //   enableBackground: false
+  // });
+  
   // Determine if we should use cyberpunk styling
   const shouldUseCyberpunk = isCyberpunk;
+  
+  // Play connection sound when wallet connects (archived - VaultPage is commented out)
+  // useEffect(() => {
+  //   if (isWalletConnected && isCyberpunk) {
+  //     playConnectionSound();
+  //   }
+  // }, [isWalletConnected, isCyberpunk, playConnectionSound]);
   
   const {
     personalInfo,
@@ -88,6 +120,10 @@ export const VaultPage: React.FC = () => {
   const [qrData, setQrData] = useState<any>(null);
   const [qrTitle, setQrTitle] = useState('');
   const [qrSubtitle, setQrSubtitle] = useState('');
+  
+  // Stripe payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   // Wallet-only vault - no default data refs needed
   
   // Wallet connection is now the only requirement for vault access
@@ -105,6 +141,26 @@ export const VaultPage: React.FC = () => {
       setSelectedAIProvider(savedProvider);
     }
   }, []);
+
+  // Load subscription status for connected wallet
+  useEffect(() => {
+    if (connectedWallets.length > 0) {
+      const walletAddress = connectedWallets[0].address;
+      const subscription = usageTrackingService.getSubscriptionStatus(walletAddress);
+      setSubscriptionStatus(subscription);
+    } else {
+      setSubscriptionStatus(null);
+    }
+  }, [connectedWallets]);
+
+  // Handle successful payment
+  const handlePaymentSuccess = (subscription: SubscriptionStatus) => {
+    setSubscriptionStatus(subscription);
+    setPaymentModalOpen(false);
+    toast.success('Pro subscription activated! You now have unlimited wallet assistance.');
+  };
+
+  // Wallet QR code is now displayed directly - no auto-generation needed
 
   // Wallet-only vault - no auto-added data cleanup needed
 
@@ -175,15 +231,15 @@ export const VaultPage: React.FC = () => {
   ];
 
   const handleAddInfo = async () => {
-    console.log('🔄 handleAddInfo called with newInfo:', newInfo);
+    logger.debug('🔄 handleAddInfo called with newInfo:', newInfo);
     
     // Check if any fields are filled
-    const hasFields = Object.values(newInfo.fields).some(value => value.trim() !== '');
+    const hasFields = newInfo.fields ? Object.values(newInfo.fields).some(value => value.trim() !== '') : false;
     
-    console.log('🔄 handleAddInfo: Fields check result:', { hasFields, fieldsCount: Object.keys(newInfo.fields).length, fields: newInfo.fields });
+    logger.debug('🔄 handleAddInfo: Fields check result:', { hasFields, fieldsCount: newInfo.fields ? Object.keys(newInfo.fields).length : 0, fields: newInfo.fields });
     
     if (!hasFields) {
-      console.log('❌ handleAddInfo: No fields filled, showing error to user');
+      logger.debug('❌ handleAddInfo: No fields filled, showing error to user');
       toast.error('Please fill in at least one field to add information');
       return;
     }
@@ -201,13 +257,16 @@ export const VaultPage: React.FC = () => {
       displayValue = Object.values(newInfo.fields).find(value => value.trim() !== '') || '';
     }
     
-    console.log('🔄 handleAddInfo: Calling addInfo with data:', {
+    logger.debug('🔄 handleAddInfo: Calling addInfo with data:', {
       type: newInfo.type,
       label: label,
       value: displayValue,
       category: selectedType?.category,
       fields: newInfo.fields
     });
+    
+    // Check if this will be the first item (after adding)
+    const wasFirstItem = personalInfo.length === 0;
     
     const success = await addInfo({
       type: newInfo.type,
@@ -217,17 +276,24 @@ export const VaultPage: React.FC = () => {
       fields: newInfo.fields
     });
     
-    console.log('🔄 handleAddInfo: addInfo result:', success);
-    console.log('🔄 handleAddInfo: Current error state after addInfo:', error);
+    logger.debug('🔄 handleAddInfo: addInfo result:', success);
+    logger.debug('🔄 handleAddInfo: Current error state after addInfo:', error);
     
     if (success) {
+      // Audio system archived - VaultPage is currently commented out in routes
+      // if (isCyberpunk) {
+      //   playActionSound();
+      // }
+      
       toast.success('Information added successfully!');
       setNewInfo({ type: 'id_card', label: 'Personal Details', value: '', fields: {} });
       setIsAddingNew(false);
+      
+      // Wallet QR is now displayed directly - no generation needed
     } else {
       // The error will already be shown by the notificationService in useVault
       // and the error state will be displayed in the error banner
-      console.error('❌ Failed to add information. Error state:', error);
+      logger.error('❌ Failed to add information. Error state:', error);
     }
   };
 
@@ -247,7 +313,7 @@ export const VaultPage: React.FC = () => {
 
   const handleSaveEdit = async () => {
     // Check if any fields are filled
-    const hasFields = Object.values(newInfo.fields).some(value => value.trim() !== '');
+    const hasFields = newInfo.fields ? Object.values(newInfo.fields).some(value => value.trim() !== '') : false;
     
     if (editingId && hasFields) {
       const selectedType = infoTypes.find(t => t.value === newInfo.type);
@@ -280,7 +346,14 @@ export const VaultPage: React.FC = () => {
   const handleDeleteInfo = async (id: string) => {
     const success = await deleteInfo(id);
     if (success) {
+      // Audio system archived - VaultPage is currently commented out in routes
+      // if (isCyberpunk) {
+      //   playActionSound();
+      // }
+      
       // Info will be removed from the list automatically by the hook
+      
+      // Wallet QR remains - no deletion needed
     }
   };
 
@@ -307,7 +380,7 @@ export const VaultPage: React.FC = () => {
         setQrModalOpen(true);
       }
     } catch (error) {
-      console.error('Failed to generate master QR code:', error);
+      logger.error('Failed to generate master QR code:', error);
     }
   };
 
@@ -556,7 +629,7 @@ export const VaultPage: React.FC = () => {
                   ? 'cyberpunk-gradient-text cyberpunk-font' 
                   : 'text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent'
               }`}>
-                {shouldUseCyberpunk ? 'BIT VAULT' : 'Bit Vault'}
+                {shouldUseCyberpunk ? 'BIT VAULT' : 'bitVault'}
               </h1>
               <p className={`transition-all duration-300 ${
                 shouldUseCyberpunk 
@@ -564,7 +637,7 @@ export const VaultPage: React.FC = () => {
                   : 'text-secondary-600'
               }`}>
                 {shouldUseCyberpunk 
-                  ? 'Secure Bit Vault data storage and management system' 
+                  ? 'Secure bitVault data storage and management system' 
                   : 'Securely store and manage your personal information'}
               </p>
             </div>
@@ -602,27 +675,24 @@ export const VaultPage: React.FC = () => {
                 <span>Add Information</span>
               </Button>
               
-              <Button
-                variant="outline"
-                onClick={generateMasterBarcode}
-                className="flex items-center gap-4"
-                disabled={personalInfo.length === 0 || loading}
-                title="Generate QR code"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Generate QR Code</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleBackupVault}
-                className="flex items-center gap-4"
-                disabled={personalInfo.length === 0 || loading}
-                title="Backup vault data"
-              >
-                <Download className="w-4 h-4" />
-                <span>Backup</span>
-              </Button>
+              {/* Display Wallet QR Code */}
+              {connectedWallets.length > 0 && (
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white p-2 rounded-lg border border-secondary-200">
+                    {connectedWallets[0].address && (
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${connectedWallets[0].address}`}
+                        alt="Wallet QR"
+                        className="w-full h-full"
+                      />
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium text-secondary-900">{connectedWallets[0].address?.slice(0, 6)}...{connectedWallets[0].address?.slice(-4)}</p>
+                    <p className="text-secondary-500 text-xs">Wallet Address</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -897,7 +967,7 @@ export const VaultPage: React.FC = () => {
                     </div>
 
                     {/* Additional Fields */}
-                    {Object.keys(info.fields).length > 0 && (
+                    {info.fields && Object.keys(info.fields).length > 0 && (
                       <div className="gap-4">
                         <label className="block text-sm font-medium text-secondary-700">
                           Additional Details
@@ -959,7 +1029,14 @@ export const VaultPage: React.FC = () => {
           <ConnectedWalletsList />
         </div>
 
-        {/* Section 3: AI Provider Selection */}
+        {/* Section 3: Usage Limit Banner (Freemium) */}
+        {connectedWallets.length > 0 && (
+          <div className="mt-8">
+            <UsageLimitBanner onUpgradeClick={() => setPaymentModalOpen(true)} />
+          </div>
+        )}
+
+        {/* Section 4: AI Provider Selection */}
         <div className="mt-8">
           <AIProviderSelector
             selectedProvider={selectedAIProvider}
@@ -1348,6 +1425,16 @@ export const VaultPage: React.FC = () => {
         title={qrTitle}
         subtitle={qrSubtitle}
       />
+
+      {/* Stripe Payment Modal */}
+      {connectedWallets.length > 0 && (
+        <StripePaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          walletAddress={connectedWallets[0].address}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
       </div>
     </div>
   );

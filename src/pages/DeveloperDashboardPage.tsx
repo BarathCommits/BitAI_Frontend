@@ -308,7 +308,7 @@ export const DeveloperDashboardPage: React.FC = () => {
                         ? 'text-white cyberpunk-font' 
                         : 'text-secondary-900'
                     }`}>
-                      {theme === 'cyberpunk' ? 'SUBMIT WITH SAFE SDK' : 'Submit with SDK'}
+                      {theme === 'cyberpunk' ? 'SUBMIT WITH BIT SDK' : 'Submit with SDK'}
                     </h3>
                     <p className={`text-sm transition-all duration-300 ${
                       theme === 'cyberpunk' 
@@ -316,7 +316,7 @@ export const DeveloperDashboardPage: React.FC = () => {
                         : 'text-secondary-600'
                     }`}>
                       {theme === 'cyberpunk' 
-                        ? 'Use our Safe SDK for instant validation and faster Safe approval' 
+                        ? 'Use our Bit SDK for instant validation and faster Bit approval' 
                         : 'Use our SDK for instant validation and faster approval'}
                     </p>
                   </div>
@@ -348,7 +348,7 @@ export const DeveloperDashboardPage: React.FC = () => {
                         ? 'text-white cyberpunk-font' 
                         : 'text-secondary-900'
                     }`}>
-                      {theme === 'cyberpunk' ? 'SAFE SDK DATABASE' : 'SDK Documentation'}
+                      {theme === 'cyberpunk' ? 'BIT SDK DATABASE' : 'SDK Documentation'}
                     </h3>
                     <p className={`text-sm transition-all duration-300 ${
                       theme === 'cyberpunk' 
@@ -447,7 +447,7 @@ export const DeveloperDashboardPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => window.open(`/safe-store?app=${submission.id}`, '_blank')}
+                            onClick={() => window.open(`/bit-store?app=${submission.id}`, '_blank')}
                             leftIcon={<ExternalLink className="w-4 h-4" />}
                           >
                             View in Store

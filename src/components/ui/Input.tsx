@@ -1,3 +1,16 @@
+/**
+ * Input Component
+ * 
+ * Reusable input component with:
+ * - Label and helper text support
+ * - Error state display
+ * - Left/right icon support
+ * - Full width option
+ * - Theme-aware styling (cyberpunk/modern)
+ * - Automatic ID generation for accessibility
+ * 
+ * This is a core UI component used for form inputs throughout the app.
+ */
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { useBuiltInWallet } from '../../hooks/useBuiltInWallet';

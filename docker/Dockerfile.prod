@@ -18,10 +18,12 @@ RUN npm install --legacy-peer-deps --production && \
     npm cache clean --force
 
 # Copy config files
-COPY config/config-overrides.js ./config-overrides.js
-COPY config/postcss.config.js ./postcss.config.js
-COPY config/tailwind.config.js ./tailwind.config.js
-COPY config/tsconfig.json ./tsconfig.json
+# NOTE: React build tools (react-app-rewired, postcss, tailwind) expect configs at root level
+# This follows React conventions - configs are at root in the repository
+COPY config-overrides.js ./config-overrides.js
+COPY postcss.config.js ./postcss.config.js
+COPY tailwind.config.js ./tailwind.config.js
+COPY config/tsconfig.json ./tsconfig.json  # TypeScript config stays in /config/ folder
 
 # Copy source
 COPY public ./public

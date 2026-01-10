@@ -5,6 +5,9 @@
 
 import { solanaBackendService } from './SolanaBackendService';
 
+// Alias for consistency
+const walletOnlySolanaService = solanaBackendService;
+
 interface ChatCommand {
   intent: string;
   parameters: Record<string, any>;

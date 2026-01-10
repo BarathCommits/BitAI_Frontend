@@ -29,7 +29,12 @@ import {
   Info,
   Github,
   Twitter,
-  MessageCircle
+  MessageCircle,
+  Archive,
+  MoreVertical,
+  Star,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 
 // Export icons as a single object to reduce chunk splitting
@@ -59,6 +64,11 @@ export const Icons = {
   Info,
   Github,
   Twitter,
-  MessageCircle
+  MessageCircle,
+  Archive,
+  MoreVertical,
+  Star,
+  ThumbsUp,
+  ThumbsDown
 };
 

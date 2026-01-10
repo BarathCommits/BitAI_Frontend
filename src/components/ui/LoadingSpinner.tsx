@@ -1,3 +1,13 @@
+/**
+ * Loading Spinner Component
+ * 
+ * Reusable loading spinner with:
+ * - Multiple sizes (xs, sm, md, lg, xl)
+ * - Color variants (primary, secondary, white, current)
+ * - Smooth animation
+ * 
+ * Used throughout the app to indicate loading states.
+ */
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { Loader2 } from 'lucide-react';

@@ -1,11 +1,18 @@
 /**
  * Backend Integration Service
  * 
- * This service provides a unified interface to interact with the new Safe backend APIs.
- * It handles authentication, wallet management, vault operations, and error handling.
+ * Provides a unified interface to interact with the backend APIs.
+ * 
+ * Features:
+ * - Authentication (login, register, logout)
+ * - Wallet management
+ * - Vault operations
+ * - Error handling
+ * 
+ * Used throughout the app for backend communication.
  */
-
 import { API_CONFIG } from '../config/api';
+import { logger } from '../utils/logger';
 
 // Types
 export interface BackendAPIResponse<T> {
@@ -98,7 +105,7 @@ class BackendIntegrationService {
       if (result.success && result.data?.token) {
         localStorage.setItem('jwtToken', result.data.token);
         localStorage.setItem('user', JSON.stringify(result.data.user));
-        console.log('✅ Login successful, token stored');
+        logger.debug('✅ Login successful, token stored');
       }
       
       return result;
@@ -123,7 +130,7 @@ class BackendIntegrationService {
       if (result.success && result.data?.token) {
         localStorage.setItem('jwtToken', result.data.token);
         localStorage.setItem('user', JSON.stringify(result.data.user));
-        console.log('✅ Registration successful, token stored');
+        logger.debug('✅ Registration successful, token stored');
       }
       
       return result;
@@ -138,7 +145,7 @@ class BackendIntegrationService {
   logout(): void {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('user');
-    console.log('✅ Logout successful, token cleared');
+    logger.debug('✅ Logout successful, token cleared');
   }
 
   getToken(): string | null {
@@ -179,7 +186,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<WalletData>(response);
       
       if (result.success) {
-        console.log('✅ Wallet connected and stored in backend:', result.data);
+        logger.debug('✅ Wallet connected and stored in backend:', result.data);
       }
       
       return result;
@@ -201,7 +208,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<WalletStatus>(response);
       
       if (result.success) {
-        console.log('✅ Wallet status retrieved:', result.data);
+        logger.debug('✅ Wallet status retrieved:', result.data);
       }
       
       return result;
@@ -223,7 +230,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<WalletData[]>(response);
       
       if (result.success) {
-        console.log('✅ All wallets retrieved:', result.data);
+        logger.debug('✅ All wallets retrieved:', result.data);
       }
       
       return result;
@@ -245,7 +252,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<void>(response);
       
       if (result.success) {
-        console.log('✅ Wallet disconnected from backend');
+        logger.debug('✅ Wallet disconnected from backend');
       }
       
       return result;
@@ -268,7 +275,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<{ verified: boolean }>(response);
       
       if (result.success) {
-        console.log('✅ Wallet signature verified:', result.data?.verified);
+        logger.debug('✅ Wallet signature verified:', result.data?.verified);
       }
       
       return result;
@@ -292,7 +299,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<VaultData>(response);
       
       if (result.success) {
-        console.log('✅ PII data stored in vault:', result.data);
+        logger.debug('✅ PII data stored in vault:', result.data);
       }
       
       return result;
@@ -314,7 +321,7 @@ class BackendIntegrationService {
       const result = await this.handleResponse<VaultData[]>(response);
       
       if (result.success) {
-        console.log('✅ PII data retrieved from vault:', result.data);
+        logger.debug('✅ PII data retrieved from vault:', result.data);
       }
       
       return result;
@@ -345,7 +352,7 @@ class BackendIntegrationService {
 
   // Error handling helper
   handleError(error: any, context: string): string {
-    console.error(`❌ ${context}:`, error);
+    logger.error(`❌ ${context}:`, error);
     
     if (error?.response?.status === 401) {
       this.logout();

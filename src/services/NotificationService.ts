@@ -87,7 +87,7 @@ class NotificationService {
 
   newDappAvailable(dappName: string) {
     this.notify('dapp', 'New DApp Available', `${dappName} is now available in the store`, {
-      actionUrl: '/safe-store',
+      actionUrl: '/bit-store', // Updated to bit-store for consistency
       actionText: 'Browse Store'
     });
   }

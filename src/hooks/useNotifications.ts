@@ -1,13 +1,23 @@
 /**
  * Notifications Hook
- * Fetches notifications from backend (NO localStorage)
- * Syncs with backend API for all operations
+ * 
+ * Fetches notifications from backend (NO localStorage).
+ * Syncs with backend API for all operations.
+ * 
+ * Features:
+ * - Fetch notifications from backend
+ * - Mark as read/unread
+ * - Delete notifications
+ * - Auto-polling every 30 seconds
+ * - Unread count tracking
+ * 
+ * Used in Header and NotificationPanel components.
  */
-
 import { useEffect, useCallback } from 'react';
 import { useNotificationStore } from '../store/notificationStore';
 import { notificationBackendService } from '../services/NotificationBackendService';
 import { useAuthStore } from '../store/authStore';
+import { logger } from '../utils/logger';
 
 export const useNotifications = () => {
   const { isAuthenticated } = useAuthStore();
@@ -31,7 +41,7 @@ export const useNotifications = () => {
     // Check both auth store and localStorage token
     const token = localStorage.getItem('jwtToken');
     if (!isAuthenticated || !token) {
-      console.log('⏭️ Notifications: Skipping fetch - user not authenticated');
+      logger.debug('⏭️ Notifications: Skipping fetch - user not authenticated');
       setNotifications([]);
       setUnreadCount(0);
       return;
@@ -49,7 +59,7 @@ export const useNotifications = () => {
           setUnreadCount(response.data.pagination.unreadCount);
         }
       } else if (response.error?.code === 'INVALID_TOKEN') {
-        console.log('🔒 Notifications: Invalid token, clearing auth state');
+        logger.warn('🔒 Notifications: Invalid token, clearing auth state');
         // Token is invalid, clear auth state
         localStorage.removeItem('jwtToken');
         localStorage.removeItem('user');
@@ -57,7 +67,7 @@ export const useNotifications = () => {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      logger.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +79,7 @@ export const useNotifications = () => {
   const fetchUnreadCount = useCallback(async () => {
     const token = localStorage.getItem('jwtToken');
     if (!isAuthenticated || !token) {
-      console.log('⏭️ Notifications: Skipping unread count - user not authenticated');
+      logger.debug('⏭️ Notifications: Skipping unread count - user not authenticated');
       setUnreadCount(0);
       return;
     }
@@ -78,7 +88,7 @@ export const useNotifications = () => {
       const count = await notificationBackendService.getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
-      console.error('Failed to fetch unread count:', error);
+      logger.error('Failed to fetch unread count:', error);
       setUnreadCount(0);
     }
   }, [isAuthenticated, setUnreadCount]);
@@ -94,7 +104,7 @@ export const useNotifications = () => {
     try {
       await notificationBackendService.markAsRead(id);
     } catch (error) {
-      console.error('Failed to sync mark as read with backend:', error);
+      logger.error('Failed to sync mark as read with backend:', error);
       // Could revert local state here if needed
     }
   }, [markAsReadLocal]);
@@ -110,7 +120,7 @@ export const useNotifications = () => {
     try {
       await notificationBackendService.markAllAsRead();
     } catch (error) {
-      console.error('Failed to sync mark all as read with backend:', error);
+      logger.error('Failed to sync mark all as read with backend:', error);
     }
   }, [markAllAsReadLocal]);
 
@@ -125,7 +135,7 @@ export const useNotifications = () => {
     try {
       await notificationBackendService.deleteNotification(id);
     } catch (error) {
-      console.error('Failed to sync delete with backend:', error);
+      logger.error('Failed to sync delete with backend:', error);
     }
   }, [deleteNotificationLocal]);
 
@@ -140,7 +150,7 @@ export const useNotifications = () => {
     try {
       await notificationBackendService.clearAll();
     } catch (error) {
-      console.error('Failed to sync clear all with backend:', error);
+      logger.error('Failed to sync clear all with backend:', error);
     }
   }, [clearAllLocal]);
 

@@ -1,9 +1,20 @@
-import { BitApp } from './BitAppService';
-
 /**
  * AI-Powered dApp Integration Service
- * Enables natural language interaction with dApps
+ * 
+ * Enables natural language interaction with dApps through the AI chat.
+ * 
+ * Features:
+ * - Parse user intents (search, open, execute, query, info)
+ * - Match dApps based on natural language queries
+ * - Generate suggested actions for dApp interactions
+ * - Handle wallet-related queries
+ * 
+ * Used in ChatPage for AI-powered dApp discovery and interaction.
+ * 
+ * Note: This service is actively used in the chat interface.
  */
+import { BitApp } from './BitAppService';
+import { logger } from '../utils/logger';
 
 export interface DAppAction {
   dappId: string;
@@ -32,7 +43,7 @@ class AIDAppIntegrationService {
    */
   setDApps(dapps: BitApp[]) {
     this.dapps = dapps;
-    console.log('🤖 AI Service: Loaded', dapps.length, 'apps. Sample:', dapps.slice(0, 3).map(d => d.name));
+    logger.debug('🤖 AI Service: Loaded', dapps.length, 'apps. Sample:', dapps.slice(0, 3).map(d => d.name));
   }
 
   /**
@@ -112,7 +123,7 @@ class AIDAppIntegrationService {
     response: string;
     suggestedActions?: Array<{ label: string; action: string; dappId?: string }>;
   } {
-    console.log('🔍 AI Search: Query:', input, '| Available apps:', this.dapps.length);
+    logger.debug('🔍 AI Search: Query:', input, '| Available apps:', this.dapps.length);
     
     // Detect category
     let category: string | undefined;
@@ -120,19 +131,19 @@ class AIDAppIntegrationService {
     if (input.includes('nft')) category = 'NFT';
     if (input.includes('tool') || input.includes('utility')) category = 'Tools';
 
-    console.log('📁 AI Search: Detected category:', category || 'none');
+    logger.debug('📁 AI Search: Detected category:', category || 'none');
 
     // Filter dApps
     let filteredDApps = this.dapps;
     if (category) {
       // Case-insensitive category matching
       filteredDApps = this.dapps.filter(d => d.category?.toLowerCase() === category.toLowerCase());
-      console.log('📁 AI Search: After category filter:', filteredDApps.length, 'apps');
+      logger.debug('📁 AI Search: After category filter:', filteredDApps.length, 'apps');
     }
 
     // Search by name/tag - but only if there are meaningful keywords
     const keywords = this.extractKeywords(input);
-    console.log('🔑 AI Search: Extracted keywords:', keywords);
+    logger.debug('🔑 AI Search: Extracted keywords:', keywords);
     
     // Only apply keyword filter if we have keywords AND either have a category already or keywords are specific
     if (keywords.length > 0 && !input.includes('all') && !input.includes('show me') && !input.includes('list')) {
@@ -144,10 +155,10 @@ class AIDAppIntegrationService {
           d.tags?.some(t => t.toLowerCase().includes(k))
         )
       );
-      console.log('🔍 AI Search: Keyword filter reduced from', beforeFilter, 'to', filteredDApps.length);
+      logger.debug('🔍 AI Search: Keyword filter reduced from', beforeFilter, 'to', filteredDApps.length);
     }
 
-    console.log('🎯 AI Search: Final filtered count:', filteredDApps.length, 'apps');
+    logger.debug('🎯 AI Search: Final filtered count:', filteredDApps.length, 'apps');
 
     const response = filteredDApps.length > 0
       ? `I found ${filteredDApps.length} app${filteredDApps.length > 1 ? 's' : ''} ${category ? `in ${category}` : ''}:\n\n${filteredDApps.slice(0, 5).map((d, i) => `${i + 1}. **${d.name}** - ${d.description}`).join('\n')}`
@@ -159,7 +170,7 @@ class AIDAppIntegrationService {
       dappId: d.id
     }));
 
-    console.log('💬 AI Search: Response generated with', suggestedActions.length, 'actions');
+    logger.debug('💬 AI Search: Response generated with', suggestedActions.length, 'actions');
 
     return {
       intent: {
@@ -451,7 +462,7 @@ class AIDAppIntegrationService {
 
     // This would integrate with actual dApp contracts
     // Return error until backend integration is ready
-    console.log('Executing action:', action);
+    logger.debug('Executing action:', action);
 
     return {
       success: false,

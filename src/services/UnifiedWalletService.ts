@@ -1,7 +1,20 @@
 /**
  * Unified Wallet Service - Solana Only
- * Provides a unified interface for Solana wallets only (for hackathon)
+ * 
+ * Provides a unified interface for Solana wallets.
+ * 
+ * Features:
+ * - Connect/disconnect Solana wallets
+ * - Wallet authentication with backend
+ * - Balance fetching
+ * - Message signing
+ * 
+ * Used by BuiltInWalletService and wallet hooks.
  */
+import { useAuthStore } from '../store/authStore';
+import { analyticsService } from './AnalyticsService';
+import { API_CONFIG } from '../config/api';
+import { logger } from '../utils/logger';
 
 export interface WalletInfo {
   id: string;
@@ -345,8 +358,8 @@ class UnifiedWalletService {
         }
 
         if (!solanaProvider) {
-          console.log(`Wallet provider not found for ${wallet.name}`);
-          console.log('Available window objects:', Object.keys(window).filter(key => key.toLowerCase().includes('sol')));
+          logger.debug(`Wallet provider not found for ${wallet.name}`);
+          logger.debug('Available window objects:', Object.keys(window).filter(key => key.toLowerCase().includes('sol')));
           
           // Provide helpful installation links for popular wallets
           if (walletId === 'phantom') {
@@ -361,9 +374,15 @@ class UnifiedWalletService {
         }
 
         // Debug log the provider structure
-        console.log('Solana provider:', solanaProvider);
-        console.log('Provider methods:', Object.getOwnPropertyNames(solanaProvider));
-        console.log('Provider publicKey:', solanaProvider.publicKey);
+        if (solanaProvider) {
+          logger.debug('Solana provider:', solanaProvider);
+          try {
+            logger.debug('Provider methods:', Object.getOwnPropertyNames(solanaProvider));
+          } catch {
+            logger.debug('Provider methods: [unavailable]');
+          }
+          logger.debug('Provider publicKey:', solanaProvider.publicKey);
+        }
 
         // Connect to Solana wallet
         const response = await solanaProvider.connect();
@@ -376,9 +395,9 @@ class UnifiedWalletService {
         let publicKey: string;
         
         // Debug log the response structure
-        console.log('Wallet response:', response);
-        console.log('Response type:', typeof response);
-        console.log('Response keys:', response ? Object.keys(response) : 'null');
+        logger.debug('Wallet response:', response);
+        logger.debug('Response type:', typeof response);
+        logger.debug('Response keys:', response ? Object.keys(response) : 'null');
         
         // Try multiple ways to extract the public key
         if (response === true || response === false) {
@@ -431,7 +450,7 @@ class UnifiedWalletService {
           // If no publicKey found, log the full response and try to extract manually
           else {
             const responseStr = JSON.stringify(response, null, 2);
-            console.log('Full response structure:', responseStr);
+            logger.debug('Full response structure:', responseStr);
             
             // Try to find any property that looks like a public key (base58 string)
             const possibleKeys = Object.keys(response).filter(key => 
@@ -439,7 +458,7 @@ class UnifiedWalletService {
             );
             
             if (possibleKeys.length > 0) {
-              console.log('Possible public key fields:', possibleKeys);
+              logger.debug('Possible public key fields:', possibleKeys);
               publicKey = response[possibleKeys[0]];
             } else {
               throw new Error(`No publicKey found in response. Available keys: ${Object.keys(response).join(', ')}. Response: ${responseStr}`);
@@ -456,6 +475,34 @@ class UnifiedWalletService {
         wallet.chainId = 101; // Solana mainnet chain ID
         this.wallets.set(walletId, wallet);
 
+        // Track wallet connection
+        analyticsService.trackWalletConnect(publicKey, walletId, 101);
+
+        // Call backend wallet/connect API if authenticated
+        const token = useAuthStore.getState().token;
+        if (token) {
+          try {
+            const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+            await fetch(`${API_BASE_URL}/wallet/connect`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                walletAddress: publicKey,
+                walletType: 'solana',
+                chainId: 101,
+                walletId: walletId,
+              }),
+            }).catch(err => {
+              logger.warn('Failed to register wallet with backend:', err);
+            });
+          } catch (err) {
+            logger.warn('Error calling wallet/connect API:', err);
+          }
+        }
+
         return {
           success: true,
           address: wallet.address,
@@ -469,7 +516,7 @@ class UnifiedWalletService {
         error: 'Unsupported wallet type'
       };
     } catch (error) {
-      console.error(`Failed to connect ${wallet.name}:`, error);
+      logger.error(`Failed to connect ${wallet.name}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Connection failed'
@@ -484,7 +531,7 @@ class UnifiedWalletService {
     // If connection successful, authenticate with backend
     if (connectionResult.success && connectionResult.address) {
       try {
-        console.log('🔄 Authenticating wallet with backend...');
+        logger.debug('🔄 Authenticating wallet with backend...');
         
         // Try to get a nonce first (Solana wallet authentication)
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
@@ -501,7 +548,7 @@ class UnifiedWalletService {
             chainId: connectionResult.chainId || 101
           })
         }).catch(err => {
-          console.log('⚠️ Nonce request failed, using default message:', err);
+          logger.debug('⚠️ Nonce request failed, using default message:', err);
           return null;
         });
         
@@ -517,34 +564,46 @@ class UnifiedWalletService {
             if (nonceData.data?.nonce) {
               savedNonce = nonceData.data.nonce;
             }
-            console.log('✅ Got nonce for authentication:', savedNonce);
+            logger.debug('✅ Got nonce for authentication:', savedNonce);
           } catch (parseError) {
-            console.log('⚠️ Could not parse nonce response, using default message');
+            logger.debug('⚠️ Could not parse nonce response, using default message');
           }
         } else {
-          console.log('⚠️ Could not get nonce, using default message');
+          logger.debug('⚠️ Could not get nonce, using default message');
         }
         
         // Step 2: Sign message with Solana wallet
         let signature: string | null = null;
         try {
           const wallet = this.wallets.get(walletId);
-          if (wallet && (window as any).solana) {
-            // Use the proper Solana message signing API with proper message structure
+          const solanaProvider = (window as any).solana;
+          
+          if (wallet && solanaProvider) {
+            // Convert message to Uint8Array
             const message = new TextEncoder().encode(authMessage);
-            const signedMessage = await (window as any).solana.signMessage(message, 'utf8');
+            
+            // Use Phantom's signMessage API
+            // The API signature is: signMessage(message: Uint8Array) => Promise<{ signature: Uint8Array }>
+            const signedMessage = await solanaProvider.signMessage(message);
             
             if (signedMessage && signedMessage.signature) {
-              // Signature is already Uint8Array
-              signature = Array.from(signedMessage.signature).join(',');
-              console.log('✅ Message signed successfully');
+              // Convert Uint8Array signature to base64 string for transmission
+              // Backend can decode base64 and verify the signature
+              const signatureArray = Array.from(signedMessage.signature);
+              signature = btoa(String.fromCharCode(...signatureArray));
+              logger.debug('✅ Message signed successfully');
+            } else {
+              throw new Error('No signature returned from wallet');
             }
+          } else {
+            throw new Error('Solana wallet provider not found');
           }
         } catch (signError) {
-          console.error('❌ Failed to sign message:', signError);
-          console.log('ℹ️ Skipping authentication, wallet connected locally only');
+          logger.error('❌ Failed to sign message:', signError);
+          // Don't throw - allow wallet to connect without backend auth
+          logger.warn('⚠️ Wallet connected locally, but backend authentication failed');
         }
-        
+
         // Step 3: Verify signature and get JWT token
         if (signature) {
           try {
@@ -565,7 +624,10 @@ class UnifiedWalletService {
           
             if (verifyResponse.ok) {
               const data = await verifyResponse.json();
-              console.log('✅ Wallet authenticated with backend:', data);
+              logger.debug('✅ Wallet authenticated with backend:', data);
+              
+              // Log full response for debugging
+              logger.debug('Full auth response:', JSON.stringify(data, null, 2));
               
               // Handle both direct token and nested token formats
               let token = null;
@@ -575,29 +637,31 @@ class UnifiedWalletService {
                 token = data.data.token;
               } else if (data.data?.authToken) {
                 token = data.data.authToken;
+              } else if (data.success && data.data?.token) {
+                token = data.data.token;
               }
               
-              if (token) {
-                localStorage.setItem('jwtToken', token);
-                console.log('✅ JWT token stored');
-                
-                // Also store user data if available
-                if (data.data?.user || data.user) {
-                  localStorage.setItem('user', JSON.stringify(data.data?.user || data.user));
-                }
+              const userData = data.data?.user || data.user;
+
+              if (token && userData) {
+                useAuthStore.getState().setAuth(token, {
+                  ...userData,
+                  walletAddress: userData.walletAddress || connectionResult.address || ''
+                });
+                logger.debug('✅ JWT token stored and auth state updated');
               } else {
-                console.warn('⚠️ Backend did not return a token');
+                logger.error('❌ Backend did not return a token. Full response:', data);
               }
             } else {
               const errorText = await verifyResponse.text();
-              console.warn(`⚠️ Backend returned status ${verifyResponse.status}:`, errorText);
+              logger.error(`❌ Backend returned status ${verifyResponse.status}:`, errorText);
             }
           } catch (verifyError) {
-            console.log('⚠️ Verify request failed:', verifyError);
+            logger.debug('⚠️ Verify request failed:', verifyError);
           }
         }
       } catch (backendError) {
-        console.log('ℹ️ Backend authentication unavailable, wallet connected locally');
+        logger.debug('ℹ️ Backend authentication unavailable, wallet connected locally');
       }
     }
     
@@ -648,9 +712,16 @@ class UnifiedWalletService {
         }
 
         wallet.isConnected = false;
+        const disconnectedAddress = wallet.address;
         wallet.address = undefined;
         wallet.chainId = undefined;
+        wallet.isConnected = false;
         this.wallets.set(walletId, wallet);
+
+        // Track wallet disconnection
+        if (disconnectedAddress) {
+          analyticsService.trackWalletDisconnect(disconnectedAddress);
+        }
 
         return {
           success: true,
@@ -663,7 +734,7 @@ class UnifiedWalletService {
         error: 'Unsupported wallet type'
       };
     } catch (error) {
-      console.error(`Failed to disconnect ${wallet.name}:`, error);
+      logger.error(`Failed to disconnect ${wallet.name}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Disconnection failed'
@@ -687,7 +758,7 @@ class UnifiedWalletService {
       // This is a placeholder implementation
       return '0 SOL';
     } catch (error) {
-      console.error(`Failed to get balance for ${wallet.name}:`, error);
+      logger.error(`Failed to get balance for ${wallet.name}:`, error);
       return null;
     }
   }
@@ -733,11 +804,12 @@ class UnifiedWalletService {
           const signedMessage = await solanaProvider.signMessage(encodedMessage);
           return Buffer.from(signedMessage.signature).toString('base64');
         }
+        throw new Error(`${wallet.name} provider does not support message signing. Please ensure the wallet extension is up to date.`);
       }
 
       return null;
     } catch (error) {
-      console.error(`Failed to sign message with ${wallet.name}:`, error);
+      logger.error(`Failed to sign message with ${wallet.name}:`, error);
       return null;
     }
   }

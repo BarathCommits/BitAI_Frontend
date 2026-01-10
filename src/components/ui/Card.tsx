@@ -1,3 +1,15 @@
+/**
+ * Card Component
+ * 
+ * Reusable card component with:
+ * - Multiple variants (default, elevated, flat, outlined)
+ * - Padding options (none, sm, md, lg)
+ * - Hover effects
+ * - Theme-aware styling (cyberpunk/modern)
+ * - Sub-components: CardHeader, CardContent, CardFooter
+ * 
+ * This is a core UI component used for content containers throughout the app.
+ */
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { useBuiltInWallet } from '../../hooks/useBuiltInWallet';

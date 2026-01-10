@@ -182,7 +182,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                 ? 'text-white/80' 
                 : ''
             }`} />
-            <span>{theme === 'cyberpunk' ? 'Choose your Safe AI assistant' : 'Choose your preferred AI assistant'}</span>
+            <span>{theme === 'cyberpunk' ? 'Choose your bitAI assistant' : 'Choose your preferred AI assistant'}</span>
           </div>
         </div>
       </CardHeader>
@@ -233,7 +233,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                           ? 'text-white/80 cyberpunk-font' 
                           : 'text-secondary-600'
                       }`}>
-                        {theme === 'cyberpunk' ? 'Choose a Safe AI provider below' : 'Choose an AI provider below'}
+                        {theme === 'cyberpunk' ? 'Choose a bitAI provider below' : 'Choose an AI provider below'}
                       </p>
                     </div>
                   </>
@@ -367,7 +367,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
               <p className={`font-medium transition-all duration-300 ${
                 theme === 'cyberpunk' ? 'cyberpunk-font' : ''
               }`}>
-                {theme === 'cyberpunk' ? 'NEED SAFE AI CONFIGURATION HELP?' : 'Need help configuring AI providers?'}
+                {theme === 'cyberpunk' ? 'NEED BIT AI CONFIGURATION HELP?' : 'Need help configuring AI providers?'}
               </p>
               <p className={`mt-1 transition-all duration-300 ${
                 theme === 'cyberpunk' ? 'cyberpunk-font' : ''

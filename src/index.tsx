@@ -7,6 +7,7 @@ import './index.css';
 import App from './App';
 import { setupAuthInterceptor, validateSession } from './utils/apiInterceptor';
 import { isValidWalletToken, clearAuthAndReconnect } from './utils/authDebugger';
+import { logger } from './utils/logger';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,8 +27,8 @@ validateSession();
 // Check if token is valid for wallet-based auth
 const tokenCheck = isValidWalletToken();
 if (!tokenCheck.valid && localStorage.getItem('jwtToken')) {
-  console.error('❌ Invalid wallet token detected:', tokenCheck.reason);
-  console.log('🔧 Automatically clearing old auth data...');
+  logger.error('❌ Invalid wallet token detected:', tokenCheck.reason);
+  logger.info('🔧 Automatically clearing old auth data...');
   
   // Clear old token and redirect to auth
   clearAuthAndReconnect();

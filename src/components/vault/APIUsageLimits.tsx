@@ -1,8 +1,23 @@
+/**
+ * API Usage Limits Component
+ * 
+ * Displays API usage limits and quotas for AI providers.
+ * 
+ * Features:
+ * - Shows usage per provider (Gemini, Claude, Cohere, HuggingFace)
+ * - Total usage tracking
+ * - Rate limit display
+ * - Auto-refresh every 30 seconds
+ * 
+ * Note: Backend endpoint not yet implemented (TODO).
+ * Currently shows placeholder data.
+ */
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { AlertCircle, Zap, TrendingUp, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import { apiUsageService, ProviderUsage } from '../../services/APIUsageService';
 import { useAuthStore } from '../../store/authStore';
+import { logger } from '../../utils/logger';
 
 interface UsageLimit {
   provider: string;
@@ -51,7 +66,7 @@ export const APIUsageLimits: React.FC = () => {
       setTotalLimit(0);
       setTotalRemaining(0);
     } catch (error) {
-      console.error('Failed to fetch API usage:', error);
+      logger.error('Failed to fetch API usage:', error);
     } finally {
       setIsLoading(false);
     }

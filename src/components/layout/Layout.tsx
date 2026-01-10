@@ -1,9 +1,21 @@
+/**
+ * Layout Component
+ * 
+ * Main application layout wrapper that provides:
+ * - Header (always visible)
+ * - Sidebar (optional, collapsible)
+ * - Footer (optional, can be enabled/disabled)
+ * - Theme-aware styling (cyberpunk/modern)
+ * - Responsive layout adjustments
+ * 
+ * This is the root layout component used by all pages.
+ */
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { cn } from '../../utils/cn';
-import { useBuiltInWallet } from '../../hooks/useBuiltInWallet';
+// import { useBuiltInWallet } from '../../hooks/useBuiltInWallet'; // Commented out for MVP - to be released later
 import { useTheme } from '../../hooks/useTheme';
 
 export interface LayoutProps {
@@ -51,6 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </main>
       </div>
       
+      {/* Footer - Enabled */}
       {showFooter && <Footer />}
     </div>
   );

@@ -1,12 +1,21 @@
 /**
  * Built-in Wallet Hook
  * 
- * React hook for managing built-in wallet connections in Safe
+ * React hook for managing built-in wallet connections in Solana.
+ * 
+ * Features:
+ * - Initialize and manage Solana wallet connections
+ * - Connect/disconnect wallets
+ * - Track connection state
+ * - Handle connection timeouts
+ * - Auto-refresh wallet list
+ * 
+ * Used throughout the app for wallet management.
  */
-
 import { useState, useEffect, useCallback } from 'react';
 import { builtInWalletService, BuiltInWalletInfo, WalletConnectionResult } from '../services/BuiltInWalletService';
 import { notificationService } from '../services/NotificationService';
+import { logger } from '../utils/logger';
 
 export interface UseBuiltInWalletReturn {
   // Wallet state
@@ -52,9 +61,9 @@ export const useBuiltInWallet = (): UseBuiltInWalletReturn => {
         setWallets(availableWallets);
         setConnectedWallets(connected);
         
-        console.log('✅ Built-in wallets initialized:', availableWallets.length);
+        logger.debug('✅ Built-in wallets initialized:', availableWallets.length);
       } catch (err) {
-        console.error('❌ Failed to initialize wallets:', err);
+        logger.error('❌ Failed to initialize wallets:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize wallets');
       }
     };
@@ -79,7 +88,7 @@ export const useBuiltInWallet = (): UseBuiltInWalletReturn => {
   const connectWallet = useCallback(async (walletId: string): Promise<WalletConnectionResult> => {
     // Prevent multiple simultaneous connection attempts
     if (isConnecting) {
-      console.log('⚠️ Connection already in progress, skipping...');
+      logger.warn('⚠️ Connection already in progress, skipping...');
       return {
         success: false,
         error: 'Connection already in progress. Please wait...'
@@ -123,7 +132,7 @@ export const useBuiltInWallet = (): UseBuiltInWalletReturn => {
         
         // Wallet connection is now handled in connectWalletWithAuth
         // It will attempt to authenticate and get JWT token
-        console.log('✅ Wallet connected successfully');
+        logger.debug('✅ Wallet connected successfully');
         
         // Notify success
         if (result.walletInfo && result.address) {
@@ -181,7 +190,7 @@ export const useBuiltInWallet = (): UseBuiltInWalletReturn => {
       setWallets(availableWallets);
       setConnectedWallets(connected);
     } catch (err) {
-      console.error('❌ Failed to refresh wallets:', err);
+      logger.error('❌ Failed to refresh wallets:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh wallets');
     }
   }, []);

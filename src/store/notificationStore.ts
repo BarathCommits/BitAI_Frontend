@@ -106,8 +106,28 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }
     }
 
-    // TODO: Also send to backend API
-    // await fetch('http://localhost:3000/api/v1/notifications', { ... })
+    // Send to backend API
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+      fetch(`${API_BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: newNotification.type,
+          title: newNotification.title,
+          message: newNotification.message,
+          actionUrl: newNotification.actionUrl,
+          actionText: newNotification.actionText,
+          metadata: newNotification.metadata,
+        }),
+      }).catch(err => {
+        console.warn('Failed to create notification in backend:', err);
+      });
+    }
   },
 
   markAsRead: (id) => {

@@ -1,3 +1,16 @@
+/**
+ * AI Provider Config Modal Component
+ * 
+ * Modal for configuring AI provider API keys (HuggingFace, Gemini, Cohere, Claude).
+ * 
+ * Features:
+ * - API key input with show/hide toggle
+ * - Provider-specific setup instructions
+ * - Links to provider setup pages
+ * - Secure key storage
+ * 
+ * Used in VaultPage for configuring AI providers for vault features.
+ */
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';

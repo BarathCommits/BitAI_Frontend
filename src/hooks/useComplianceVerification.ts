@@ -1,9 +1,17 @@
 /**
  * Hook for automated compliance verification
+ * 
+ * Features:
+ * - Verify smart contracts for compliance
+ * - Batch verification support
+ * - Risk level assessment
+ * - Verification summary statistics
+ * 
+ * Used in ComplianceVerification component.
  */
-
 import { useState, useCallback } from 'react';
 import { automatedComplianceService, ComplianceVerificationResult } from '../services/AutomatedComplianceService';
+import { logger } from '../utils/logger';
 
 export interface UseComplianceVerificationReturn {
   // State
@@ -42,7 +50,7 @@ export const useComplianceVerification = (): UseComplianceVerificationReturn => 
     setError(null);
 
     try {
-      console.log(`🔍 Verifying contract: ${contractAddress}`);
+      logger.debug(`🔍 Verifying contract: ${contractAddress}`);
       const result = await automatedComplianceService.verifyContract(contractAddress, chainId);
       
       // Add to results if not already present
@@ -56,12 +64,12 @@ export const useComplianceVerification = (): UseComplianceVerificationReturn => 
         return [...prev, result];
       });
 
-      console.log(`✅ Contract verification completed:`, result);
+      logger.debug(`✅ Contract verification completed:`, result);
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Verification failed';
       setError(errorMessage);
-      console.error(`❌ Contract verification failed:`, err);
+      logger.error(`❌ Contract verification failed:`, err);
       
       // Return error result
       const errorResult: ComplianceVerificationResult = {
@@ -92,7 +100,7 @@ export const useComplianceVerification = (): UseComplianceVerificationReturn => 
     setError(null);
 
     try {
-      console.log(`🔄 Starting batch verification for ${contracts.length} contracts`);
+      logger.debug(`🔄 Starting batch verification for ${contracts.length} contracts`);
       const batchResults = await automatedComplianceService.batchVerifyContracts(contracts);
       
       // Update results
@@ -109,12 +117,12 @@ export const useComplianceVerification = (): UseComplianceVerificationReturn => 
         return updated;
       });
 
-      console.log(`✅ Batch verification completed:`, batchResults);
+      logger.debug(`✅ Batch verification completed:`, batchResults);
       return batchResults;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Batch verification failed';
       setError(errorMessage);
-      console.error(`❌ Batch verification failed:`, err);
+      logger.error(`❌ Batch verification failed:`, err);
       return [];
     } finally {
       setIsLoading(false);

@@ -1,198 +1,327 @@
-import { useAuthStore } from '../store/authStore';
+/**
+ * Chat Session Service
+ * Handles all session-related API calls for chat management
+ */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+import { API_CONFIG } from '../config/api';
+import { authService } from './AuthService';
 
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
-  provider?: string;
-  metadata?: {
-    tokensUsed?: number;
-    responseTime?: number;
-    cached?: boolean;
-  };
-}
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
 
 export interface ChatSession {
-  sessionId: string;
+  id: string;
   title: string;
-  messages?: ChatMessage[];
-  context?: {
-    connectedDApps?: string[];
-    walletAddress?: string;
-    chainId?: number;
+  messageCount: number;
+  lastActivity: string;
+  createdAt: string;
+  isArchived: boolean;
+  chainId?: number;
+  chainName?: string;
+  walletAddress?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  provider?: string;
+  metadata?: any;
+}
+
+export interface SessionWithMessages extends ChatSession {
+  messages: ChatMessage[];
+}
+
+export interface SessionAPIResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
   };
-  isActive: boolean;
-  lastMessageAt: Date;
-  messageCount?: number;
-  createdAt: Date;
 }
 
 class ChatSessionService {
   private getAuthHeaders(): HeadersInit {
-    const token = useAuthStore.getState().token;
+    const token = authService.getToken();
     return {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
-  private async handleResponse<T>(response: Response): Promise<{ success: boolean; data?: T; error?: string }> {
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, error: data.error?.message || 'An error occurred' };
-    }
-    return { success: true, data: data.data };
-  }
-
   /**
-   * Get all chat sessions
+   * Get active session for current user
    */
-  async getSessions(params?: { limit?: number; skip?: number; includeArchived?: boolean }): Promise<{ success: boolean; data?: { sessions: ChatSession[]; pagination: any }; error?: string }> {
+  async getActiveSession(): Promise<SessionAPIResponse<SessionWithMessages>> {
     try {
-      const query = new URLSearchParams();
-      if (params?.limit) query.append('limit', params.limit.toString());
-      if (params?.skip) query.append('skip', params.skip.toString());
-      if (params?.includeArchived) query.append('includeArchived', params.includeArchived.toString());
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions?${query}`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions/active`, {
+        method: 'GET',
         headers: this.getAuthHeaders(),
       });
-      return this.handleResponse(response);
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to get active session',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data || data,
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
     }
   }
 
   /**
-   * Get specific session with messages
+   * Create a new chat session
    */
-  async getSession(sessionId: string): Promise<{ success: boolean; data?: ChatSession; error?: string }> {
+  async createSession(title?: string): Promise<SessionAPIResponse<ChatSession>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}`, {
-        headers: this.getAuthHeaders(),
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
-  }
-
-  /**
-   * Create new session
-   */
-  async createSession(title?: string, context?: any): Promise<{ success: boolean; data?: { sessionId: string; title: string }; error?: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ title, context })
+        body: JSON.stringify({
+          title: title || 'New Chat',
+        }),
       });
-      return this.handleResponse(response);
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to create session',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data || data,
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
     }
   }
 
   /**
-   * Add message to session
+   * List all sessions for current user
    */
-  async addMessage(
+  async listSessions(): Promise<SessionAPIResponse<ChatSession[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to list sessions',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
+    }
+  }
+
+  /**
+   * Get a specific session with messages
+   */
+  async getSession(sessionId: string): Promise<SessionAPIResponse<SessionWithMessages>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions/${sessionId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to get session',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data || data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
+    }
+  }
+
+  /**
+   * Update a session (title, archive status, etc.)
+   */
+  async updateSession(
     sessionId: string,
-    role: 'user' | 'assistant',
-    content: string,
-    provider?: string,
-    metadata?: any
-  ): Promise<{ success: boolean; error?: string }> {
+    updates: { title?: string; isArchived?: boolean }
+  ): Promise<SessionAPIResponse<ChatSession>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/messages`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ role, content, provider, metadata })
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
-  }
-
-  /**
-   * Update session title
-   */
-  async updateTitle(sessionId: string, title: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/title`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions/${sessionId}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ title })
+        body: JSON.stringify(updates),
       });
-      return this.handleResponse(response);
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to update session',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data || data,
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
     }
   }
 
   /**
-   * Clear session messages
+   * Delete a session
    */
-  async clearMessages(sessionId: string): Promise<{ success: boolean; error?: string }> {
+  async deleteSession(sessionId: string): Promise<SessionAPIResponse<void>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/clear`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
-  }
-
-  /**
-   * Archive session
-   */
-  async archiveSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/archive`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
-  }
-
-  /**
-   * Delete session
-   */
-  async deleteSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sessions/${sessionId}`, {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
       });
-      return this.handleResponse(response);
+
+      if (!response.ok) {
+        const data = await response.json();
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to delete session',
+          },
+        };
+      }
+
+      return {
+        success: true,
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
     }
   }
 
   /**
-   * Get session statistics
+   * Submit feedback for a message
    */
-  async getStats(): Promise<{ success: boolean; data?: any; error?: string }> {
+  async submitFeedback(
+    messageId: string,
+    rating: number,
+    feedback?: string
+  ): Promise<SessionAPIResponse<void>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/stats`, {
+      const response = await fetch(`${API_BASE_URL}/ai/feedback`, {
+        method: 'POST',
         headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          messageId,
+          rating,
+          feedback,
+        }),
       });
-      return this.handleResponse(response);
+
+      if (!response.ok) {
+        const data = await response.json();
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'FETCH_ERROR',
+            message: data.error?.message || 'Failed to submit feedback',
+          },
+        };
+      }
+
+      return {
+        success: true,
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+        },
+      };
     }
   }
 }
 
 export const chatSessionService = new ChatSessionService();
-
-
+export default chatSessionService;

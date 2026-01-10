@@ -1,3 +1,16 @@
+/**
+ * Theme Hook
+ * 
+ * Manages application theme (light, dark, auto, cyberpunk).
+ * 
+ * Features:
+ * - Theme persistence using Zustand
+ * - Auto-switch to cyberpunk when wallet connects
+ * - System preference detection (auto mode)
+ * - Theme toggle functionality
+ * 
+ * Used throughout the app for theme management.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useEffect } from 'react';

@@ -1,3 +1,17 @@
+/**
+ * Error Boundary Component
+ * 
+ * React error boundary that catches JavaScript errors in child components.
+ * 
+ * Features:
+ * - Catches errors in component tree
+ * - Displays user-friendly error UI
+ * - Reports errors to error handler service
+ * - Provides retry, go home, and reload options
+ * - Shows error details in development mode
+ * 
+ * Used to wrap routes in App.tsx to prevent entire app crashes.
+ */
 import React, { Component, ReactNode } from 'react';
 import { Button } from './Button';
 import { Card } from './Card';

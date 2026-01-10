@@ -1,3 +1,16 @@
+/**
+ * Multi-Wallet Hook
+ * 
+ * Manages multiple wallet connections and operations.
+ * 
+ * Features:
+ * - Fetch all connected wallets
+ * - Set primary wallet
+ * - Remove wallet
+ * - Wallet status tracking
+ * 
+ * Used in wallet management components.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 

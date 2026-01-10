@@ -5,6 +5,8 @@
  * with the sidebar or other UI elements.
  */
 
+import { analyticsService } from '../services/AnalyticsService';
+
 /**
  * Opens a new tab with proper focus and error handling
  * @param url - The URL to open
@@ -103,6 +105,14 @@ export const openDApp = async (dappUrl: string, dappName: string): Promise<boole
     
     if (newWindow) {
       console.log(`✅ Successfully opened ${dappName} in new tab`);
+      
+      // Track DApp interaction
+      const dappId = dappUrl.split('/').pop() || dappName.toLowerCase().replace(/\s+/g, '-');
+      analyticsService.trackDAppInteraction(dappId, 'open', {
+        dappName,
+        dappUrl,
+      });
+      
       return true;
     } else {
       console.warn(`❌ Failed to open ${dappName} - popup blocked or invalid URL`);
@@ -178,7 +188,7 @@ export const openNewTabAlternative = (url: string, windowName?: string): Promise
       }, 50);
       
       // For this method, we can't easily detect if it was blocked
-      // So we'll resolve with a mock window object
+      // Resolve with empty window object
       resolve({} as Window);
       
     } catch (error) {

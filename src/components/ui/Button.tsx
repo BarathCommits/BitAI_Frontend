@@ -1,3 +1,16 @@
+/**
+ * Button Component
+ * 
+ * Reusable button component with:
+ * - Multiple variants (primary, secondary, outline, ghost, destructive)
+ * - Size options (sm, md, lg)
+ * - Loading state with spinner
+ * - Left/right icon support
+ * - Full width option
+ * - Theme-aware styling (cyberpunk/modern based on wallet connection)
+ * 
+ * This is a core UI component used throughout the application.
+ */
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { Loader2 } from 'lucide-react';

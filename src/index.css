@@ -788,6 +788,49 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+
+  /* Chat messages scrollbar - always visible */
+  .chat-messages-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.8) rgba(241, 245, 249, 0.5);
+  }
+
+  .chat-messages-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .chat-messages-scrollbar::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.5);
+    border-radius: 4px;
+  }
+
+  .chat-messages-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.8);
+    border-radius: 4px;
+    border: 1px solid rgba(241, 245, 249, 0.3);
+  }
+
+  .chat-messages-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.9);
+  }
+
+  /* Cyberpunk theme chat scrollbar */
+  .cyberpunk-theme .chat-messages-scrollbar {
+    scrollbar-color: rgba(99, 102, 241, 0.6) rgba(15, 23, 42, 0.3);
+  }
+
+  .cyberpunk-theme .chat-messages-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.3);
+  }
+
+  .cyberpunk-theme .chat-messages-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(139, 92, 246, 0.6));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+
+  .cyberpunk-theme .chat-messages-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(139, 92, 246, 0.8));
+  }
 }
 
 /* Custom animations */

@@ -2,6 +2,7 @@ import { errorHandler, ERROR_CODES, ErrorSeverity } from '../utils/errorHandler'
 import { API_CONFIG, getAuthHeaders } from '../config/api';
 import { STORAGE_KEYS } from '../constants/storage';
 import { authLogger as logger } from '../utils/logger';
+import { analyticsService } from './AnalyticsService';
 
 // Get API base URL from environment or default
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
@@ -244,7 +245,7 @@ class AuthService {
    * Wallet-based authentication is the primary auth method.
    */
   async login(credentials: LoginCredentials): Promise<AuthAPIResponse<AuthResponse>> {
-    console.warn('⚠️ Email/password login is deprecated. Please use wallet authentication.');
+    logger.warn('⚠️ Email/password login is deprecated. Please use wallet authentication.');
     return {
       success: false,
       error: {
@@ -258,6 +259,9 @@ class AuthService {
   // Logout and clear stored token
   async logout(): Promise<AuthAPIResponse<void>> {
     try {
+      // Track logout activity
+      analyticsService.trackLogout();
+
       const response = await fetch(API_CONFIG.AUTH.LOGOUT, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -360,7 +364,7 @@ class AuthService {
     confirmPassword: string;
     agreeToTerms: boolean;
   }): Promise<AuthAPIResponse<AuthResponse>> {
-    console.warn('⚠️ Email/password registration is deprecated. Users are auto-registered via wallet connection.');
+    logger.warn('⚠️ Email/password registration is deprecated. Users are auto-registered via wallet connection.');
     return {
       success: false,
       error: {
@@ -534,10 +538,13 @@ class AuthService {
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('walletAddress', walletData.walletAddress);
         
+        // Track login activity
+        analyticsService.trackLogin('wallet');
+        
         // Debug logging
-        console.log('AuthService: Wallet login successful');
-        console.log('AuthService: Wallet address:', walletData.walletAddress);
-        console.log('AuthService: User stored:', user);
+        logger.debug('AuthService: Wallet login successful');
+        logger.debug('AuthService: Wallet address:', walletData.walletAddress);
+        logger.debug('AuthService: User stored:', user);
       }
       
       return result;
@@ -573,7 +580,7 @@ class AuthService {
       
       if (lastRequestTime && (now - lastRequestTime) < this.NONCE_RATE_LIMIT_MS) {
         const waitTime = Math.ceil((this.NONCE_RATE_LIMIT_MS - (now - lastRequestTime)) / 1000);
-        console.log(`⏳ Rate limiting: Please wait ${waitTime} second(s) before requesting another nonce`);
+        logger.debug(`⏳ Rate limiting: Please wait ${waitTime} second(s) before requesting another nonce`);
         return {
           success: false,
           error: {
@@ -622,7 +629,7 @@ class AuthService {
    * Users control their accounts through their wallet's private keys.
    */
   async forgotPassword(email: string): Promise<AuthAPIResponse<{ message: string; resetLink?: string }>> {
-    console.warn('⚠️ Password reset not available for wallet-based authentication.');
+    logger.warn('⚠️ Password reset not available for wallet-based authentication.');
     return {
       success: false,
       error: {
@@ -637,7 +644,7 @@ class AuthService {
    * @deprecated Password reset is not available for wallet-based authentication.
    */
   async resetPassword(token: string, password: string, confirmPassword: string): Promise<AuthAPIResponse<{ message: string }>> {
-    console.warn('⚠️ Password reset not available for wallet-based authentication.');
+    logger.warn('⚠️ Password reset not available for wallet-based authentication.');
     return {
       success: false,
       error: {
@@ -652,7 +659,7 @@ class AuthService {
    * @deprecated Token verification not available for wallet-based authentication.
    */
   async verifyResetToken(token: string): Promise<AuthAPIResponse<{ email: string; username: string }>> {
-    console.warn('⚠️ Token verification not available for wallet-based authentication.');
+    logger.warn('⚠️ Token verification not available for wallet-based authentication.');
     return {
       success: false,
       error: {

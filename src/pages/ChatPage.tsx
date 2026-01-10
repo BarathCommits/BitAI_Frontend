@@ -1,6 +1,26 @@
-import React, { useState, useRef, useEffect } from 'react';
+/**
+ * Chat Page Component
+ * 
+ * Main AI chat interface - the landing page for the MVP.
+ * 
+ * Features:
+ * - AI chat with multiple providers (OpenAI, Gemini, Claude, Cohere, HuggingFace)
+ * - Wallet integration for authentication
+ * - Transaction preview and signing
+ * - Message history and session management
+ * - Usage tracking and limits
+ * - Code syntax highlighting
+ * - Markdown rendering
+ * 
+ * This is the primary user-facing page in the MVP.
+ */
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import toast from 'react-hot-toast';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
@@ -10,9 +30,183 @@ import { useAuthStore } from '../store/authStore';
 import { STORAGE_KEYS } from '../constants/storage';
 import { aiDAppIntegration } from '../services/AIDAppIntegrationService';
 import { bitAppService } from '../services/BitAppService';
-import { solanaAIChatService } from '../services/SolanaAIChatService';
+import { authService } from '../services/AuthService';
 import { openDApp } from '../utils/tabManager';
 import { Icons } from '../utils/iconUtils';
+import { usageTrackingService } from '../services/UsageTrackingService';
+// Session management commented out for MVP - to be released later
+// import { chatSessionService, ChatSession, SessionWithMessages } from '../services/ChatSessionService';
+// import { SessionListSidebar } from '../components/chat/SessionListSidebar';
+import { MessageFeedback } from '../components/chat/MessageFeedback';
+import { TransactionPreview } from '../components/chat/TransactionPreview';
+import { TransactionSigningModal } from '../components/chat/TransactionSigningModal';
+import { analyticsService } from '../services/AnalyticsService';
+import { APP_CONFIG } from '../constants/app';
+import { logger } from '../utils/logger';
+import { sanitizeInput, validateMessageLength } from '../utils/sanitize';
+
+const ALLOWED_AI_PROVIDERS = ['openai', 'gemini', 'claude', 'cohere', 'huggingface'] as const;
+const GENERAL_SESSION_STORAGE_KEY = APP_CONFIG.CHAT.SESSION_STORAGE_KEY;
+const DEFAULT_FREE_WALLET_LIMIT = APP_CONFIG.CHAT.DEFAULT_FREE_WALLET_LIMIT;
+
+let cachedGeneralSessionId: string | null = null;
+
+const sanitizeProvider = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  const normalized = raw.toLowerCase().trim();
+  return ALLOWED_AI_PROVIDERS.includes(normalized) ? normalized : null;
+};
+
+const generateGuestSessionId = (): string => {
+  const randomId =
+    typeof window !== 'undefined' &&
+    window.crypto &&
+    'randomUUID' in window.crypto
+      ? window.crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `guest-${randomId}`;
+};
+
+const getGeneralSessionId = (): string => {
+  if (cachedGeneralSessionId) {
+    return cachedGeneralSessionId;
+  }
+
+  if (typeof window === 'undefined') {
+    cachedGeneralSessionId = generateGuestSessionId();
+    return cachedGeneralSessionId;
+  }
+
+  let sessionId = '';
+  try {
+    sessionId = localStorage.getItem(GENERAL_SESSION_STORAGE_KEY) || '';
+  } catch (error) {
+    logger.warn('Unable to read general session ID from storage:', error);
+  }
+
+  if (!sessionId || sessionId.length < 12) {
+    sessionId = generateGuestSessionId();
+    try {
+      localStorage.setItem(GENERAL_SESSION_STORAGE_KEY, sessionId);
+    } catch (error) {
+      logger.warn('Unable to persist general session ID:', error);
+    }
+  }
+
+  cachedGeneralSessionId = sessionId;
+  return sessionId;
+};
+
+const callGeneralAssistant = async (
+  input: string,
+  baseWithVersion: string,
+  options: { isWalletConnected: boolean; isAuthenticated: boolean; walletAddress?: string; token?: string }
+): Promise<{ message: string; actions: string[]; transaction?: import('../types').FunctionCallTransaction }> => {
+  const { isWalletConnected, isAuthenticated, walletAddress, token } = options;
+  const sessionId = getGeneralSessionId();
+  const payload: any = {
+    message: input,
+    sessionId,
+    context: {
+      sessionId,
+      source: 'bitai_frontend',
+      initiatedAt: new Date().toISOString()
+    }
+  };
+
+  // Include wallet address if available (enables function calling for authenticated users)
+  if (walletAddress) {
+    payload.walletAddress = walletAddress;
+  }
+
+  const endpoint = `${baseWithVersion}/ai/general-chat`;
+
+  try {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    const responseText = await response.text();
+    const trimmed = responseText.trim();
+
+    if (!response.ok) {
+      return {
+        message: '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.',
+        actions: []
+      };
+    }
+
+    if (!trimmed || !(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+      return {
+        message: '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.',
+        actions: []
+      };
+    }
+
+    const data = JSON.parse(trimmed);
+    const responseData = data?.data || data;
+    const message = responseData?.response || responseData?.message || data?.message;
+
+    if (!message) {
+      return {
+        message: '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.',
+        actions: []
+      };
+    }
+
+    // Parse transaction data if present (for function calling)
+    let transaction: import('../types').FunctionCallTransaction | undefined;
+    if (responseData?.transaction) {
+      const tx = responseData.transaction;
+      transaction = {
+        id: tx.id || `tx-${Date.now()}`,
+        type: tx.type || 'solana',
+        operation: tx.operation || tx.functionName || 'unknown',
+        rawTransaction: tx.rawTransaction || tx.transaction,
+        transactionData: tx.transactionData || {
+          from: tx.from,
+          to: tx.to,
+          amount: tx.amount,
+          token: tx.token,
+          contractAddress: tx.contractAddress,
+          functionName: tx.functionName,
+          parameters: tx.parameters
+        },
+        description: tx.description || tx.message,
+        estimatedFee: tx.estimatedFee || tx.fee,
+        requiresSigning: tx.requiresSigning !== false
+      };
+    }
+
+    // Only include suggested actions from backend response, not automatic ones
+    const actions: string[] = [];
+    if (responseData?.suggestedActions && Array.isArray(responseData.suggestedActions)) {
+      actions.push(...responseData.suggestedActions.filter((action: any) => typeof action === 'string'));
+    } else if (data?.suggestedActions && Array.isArray(data.suggestedActions)) {
+      actions.push(...data.suggestedActions.filter((action: any) => typeof action === 'string'));
+    }
+
+    return {
+      message,
+      actions,
+      transaction
+    };
+  } catch (error) {
+    // Silently handle connection errors - backend may be unavailable
+    return {
+      message: '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.',
+      actions: []
+    };
+  }
+};
+
 const { 
   Send, 
   Bot, 
@@ -38,6 +232,8 @@ interface Message {
   timestamp: Date;
   dappId?: string;
   suggestedActions?: Array<{ label: string; action: string; dappId?: string }>;
+  transaction?: import('../types').FunctionCallTransaction;
+  transactionStatus?: import('../types').TransactionStatus;
 }
 
 export const ChatPage: React.FC = () => {
@@ -56,7 +252,7 @@ export const ChatPage: React.FC = () => {
   const [mainSessionMessages, setMainSessionMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '👋 Hello! I\'m Bit AI, your intelligent Web3 companion.\n\n💬 **Chat Available:** You can ask me questions about Web3, DeFi, NFTs, and blockchain technology right now!\n\n🔒 **Wallet Features:** Connect your wallet using the wallet icon in the header to access:\n• Bit Vault management\n• dApp Store\n• Advanced Web3 interactions\n\nWhat would you like to know about Web3?',
+      content: '👋 Hello! I\'m bitAI, your intelligent Web3 companion.\n\n💬 You can ask me any questions and you will get the response from a Web3 perspective.\n\nWhat would you like to know about Web3?',
       role: 'assistant',
       timestamp: new Date()
     },
@@ -73,10 +269,25 @@ export const ChatPage: React.FC = () => {
   const [dappsLoaded, setDappsLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [signingTransaction, setSigningTransaction] = useState<{ transaction: import('../types').FunctionCallTransaction; messageId: string } | null>(null);
+  
+  // Session management state - Commented out for MVP - to be released later
+  // const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  // const [sessions, setSessions] = useState<ChatSession[]>([]);
+  // const [sessionLoading, setSessionLoading] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToBottom = useCallback((instant = false) => {
+    // Use setTimeout to ensure DOM is updated
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: instant ? 'auto' : 'smooth',
+          block: 'end'
+        });
+      }
+    }, instant ? 0 : 100);
+  }, []);
 
   // Initialize wallet session greeting when wallet connects
   useEffect(() => {
@@ -84,7 +295,7 @@ export const ChatPage: React.FC = () => {
       setWalletSessionMessages([
         {
           id: '1',
-          content: '👋 Hello! I\'m Bit AI, your Web3 companion.\n\n💬 **Advanced Features Available:**\n• Bit Vault management\n• dApp Store\n• Advanced Web3 interactions\n• Real-time balance tracking\n\nWhat would you like to explore?',
+          content: '👋 Hello! I\'m bitAI, your Web3 companion.\n\n💬 You can ask me any questions and you will get the response from a Web3 perspective.\n\nWhat would you like to explore?',
           role: 'assistant',
           timestamp: new Date()
         },
@@ -97,24 +308,24 @@ export const ChatPage: React.FC = () => {
     const loadDApps = async () => {
       // Only load dApps if user is authenticated
       if (!isAuthenticated) {
-        console.log('⏭️ ChatPage: Skipping dApp loading - user not authenticated');
+        logger.debug('ChatPage: Skipping dApp loading - user not authenticated');
         return;
       }
 
       try {
-        console.log('🔄 ChatPage: Loading dApps for AI...');
+        logger.debug('ChatPage: Loading dApps for AI...');
         const result = await bitAppService.getAllApps();
-        console.log('📦 ChatPage: Got result:', result.success, 'Apps count:', result.data?.length);
+        logger.debug('ChatPage: Got result:', { success: result.success, count: result.data?.length });
         
         if (result.success && result.data) {
           aiDAppIntegration.setDApps(result.data);
           setDappsLoaded(true);
-          console.log('✅ ChatPage: Loaded', result.data.length, 'apps into AI service');
+          logger.info('ChatPage: Loaded apps into AI service', { count: result.data.length });
         } else {
-          console.warn('⚠️ ChatPage: Failed to load apps, result:', result);
+          // Silently handle - backend may be unavailable
         }
       } catch (error) {
-        console.error('❌ ChatPage: Failed to load dApps:', error);
+        logger.error('ChatPage: Failed to load dApps', error);
       }
     };
     loadDApps();
@@ -125,37 +336,36 @@ export const ChatPage: React.FC = () => {
       const wallet = localStorage.getItem('walletAddress');
       const user = localStorage.getItem('user');
       
-      console.log('🔍 Auth Debug Info:');
-      console.log('JWT Token:', token ? 'Present' : 'Missing');
-      console.log('Wallet Address:', wallet || 'Missing');
-      console.log('User Data:', user ? JSON.parse(user) : 'Missing');
-      console.log('Connected Wallets:', connectedWallets);
-      console.log('Wallet Info:', walletInfo);
-      
-      return {
+      const debugInfo = {
         hasToken: !!token,
         hasWallet: !!wallet,
         hasUser: !!user,
-        token,
-        wallet,
-        user: user ? JSON.parse(user) : null
+        token: token ? 'Present' : 'Missing',
+        wallet: wallet || 'Missing',
+        user: user ? JSON.parse(user) : null,
+        connectedWallets,
+        walletInfo
       };
+      
+      logger.debug('Auth Debug Info:', debugInfo);
+      
+      return debugInfo;
     };
     
     // Add re-authentication helper
     (window as any).reauthWallet = async () => {
       if (connectedWallets.length === 0) {
-        console.log('❌ No wallet connected');
+        logger.warn('Re-authentication: No wallet connected');
         return;
       }
       
       const wallet = connectedWallets[0];
-      console.log('🔄 Re-authenticating wallet:', wallet.address);
+      logger.info('Re-authenticating wallet:', wallet.address);
       
       try {
         // Check if MetaMask is available
         if (!window.ethereum) {
-          console.error('❌ MetaMask not installed');
+          logger.error('Re-authentication: MetaMask not installed');
           return;
         }
         
@@ -167,18 +377,25 @@ export const ChatPage: React.FC = () => {
         });
         
         if (!nonceResponse.ok) {
-          console.error('❌ Failed to get nonce');
+          logger.error('Re-authentication: Failed to get nonce');
+          return;
+        }
+        
+        // Check content type before parsing
+        const nonceContentType = nonceResponse.headers.get('content-type') || '';
+        if (!nonceContentType.includes('application/json')) {
+          logger.error('Re-authentication: Nonce endpoint returned non-JSON response');
           return;
         }
         
         const nonceData = await nonceResponse.json();
         if (!nonceData.success) {
-          console.error('❌ Nonce request failed:', nonceData.error);
+          logger.error('Re-authentication: Nonce request failed', nonceData.error);
           return;
         }
         
         // Create message for signing
-        const message = `Safe Browser wants you to sign in with your Ethereum account:
+        const message = `BitAI Browser wants you to sign in with your Ethereum account:
 ${wallet.address}
 
 This is a secure authentication request.
@@ -208,7 +425,14 @@ Issued At: ${new Date().toISOString()}`;
         });
         
         if (!authResponse.ok) {
-          console.error('❌ Authentication failed');
+          logger.error('Re-authentication: Authentication failed');
+          return;
+        }
+        
+        // Check content type before parsing
+        const authContentType = authResponse.headers.get('content-type') || '';
+        if (!authContentType.includes('application/json')) {
+          logger.error('Re-authentication: Auth endpoint returned non-JSON response');
           return;
         }
         
@@ -219,20 +443,224 @@ Issued At: ${new Date().toISOString()}`;
           localStorage.setItem('user', JSON.stringify(authData.data.user));
           localStorage.setItem('walletAddress', wallet.address);
           
-          console.log('✅ Re-authentication successful!');
-          console.log('🔄 Please refresh the page to update the chat');
+          logger.info('Re-authentication successful! Please refresh the page to update the chat');
         } else {
-          console.error('❌ Authentication failed:', authData.error);
+          logger.error('Re-authentication: Authentication failed', authData.error);
         }
       } catch (error) {
-        console.error('❌ Re-authentication failed:', error);
+        logger.error('Re-authentication: Failed', error);
       }
     };
   }, [connectedWallets, walletInfo]);
 
+  // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
+
+  // Auto-scroll when loading state changes (AI response starts/ends)
+  useEffect(() => {
+    if (isLoading) {
+      // Scroll when AI starts responding
+      scrollToBottom(true);
+    } else {
+      // Scroll when AI finishes responding
+      scrollToBottom();
+    }
+  }, [isLoading, scrollToBottom]);
+
+  // Session management functions - Commented out for MVP - to be released later
+  /*
+  const loadSessions = async () => {
+    // Check both store state and token validity
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+    
+    setSessionLoading(true);
+    try {
+      const result = await chatSessionService.listSessions();
+      if (result.success && result.data) {
+        setSessions(result.data);
+      }
+    } catch (error) {
+      logger.error('Failed to load sessions:', error);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const initializeSession = async () => {
+    // Check both store state and token validity
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+
+    setSessionLoading(true);
+    try {
+      // Try to get active session
+      const activeResult = await chatSessionService.getActiveSession();
+      if (activeResult.success && activeResult.data) {
+        setCurrentSessionId(activeResult.data.id);
+        // Convert backend messages to frontend format
+        const convertedMessages: Message[] = activeResult.data.messages?.map((msg: any) => ({
+          id: msg.id || Date.now().toString(),
+          content: msg.content,
+          role: msg.role,
+          timestamp: new Date(msg.timestamp || Date.now()),
+          suggestedActions: msg.metadata?.suggestedActions
+        })) || [];
+        setMessages(convertedMessages);
+        // Scroll to bottom when loading session messages
+        setTimeout(() => scrollToBottom(true), 100);
+      } else {
+        // No active session, create one on first message
+        setCurrentSessionId(null);
+      }
+      
+      // Load all sessions
+      await loadSessions();
+    } catch (error) {
+      logger.error('Failed to initialize session:', error);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const createNewSession = async () => {
+    if (!isAuthenticated || !authService.isAuthenticated()) {
+      toast.error('Please sign in to create sessions');
+      return;
+    }
+
+    setSessionLoading(true);
+    try {
+      const result = await chatSessionService.createSession('New Chat');
+      if (result.success && result.data) {
+        setCurrentSessionId(result.data.id);
+        setMessages([]);
+        await loadSessions();
+        
+        // Track session creation
+        analyticsService.trackSessionCreate(result.data.id);
+        
+        toast.success('New chat session created');
+      } else {
+        toast.error(result.error?.message || 'Failed to create session');
+      }
+    } catch (error) {
+      toast.error('Failed to create session');
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const switchToSession = async (sessionId: string) => {
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+
+    setSessionLoading(true);
+    try {
+      const result = await chatSessionService.getSession(sessionId);
+      if (result.success && result.data) {
+        setCurrentSessionId(sessionId);
+        // Convert backend messages to frontend format
+        const convertedMessages: Message[] = result.data.messages?.map((msg: any) => ({
+          id: msg.id || Date.now().toString(),
+          content: msg.content,
+          role: msg.role,
+          timestamp: new Date(msg.timestamp || Date.now()),
+          suggestedActions: msg.metadata?.suggestedActions
+        })) || [];
+        setMessages(convertedMessages);
+        
+        // Scroll to bottom when switching sessions
+        setTimeout(() => scrollToBottom(true), 100);
+        
+        // Track session switch
+        analyticsService.trackSessionSwitch(sessionId);
+      } else {
+        toast.error(result.error?.message || 'Failed to load session');
+      }
+    } catch (error) {
+      toast.error('Failed to load session');
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+
+    setSessionLoading(true);
+    try {
+      const result = await chatSessionService.deleteSession(sessionId);
+      if (result.success) {
+        if (currentSessionId === sessionId) {
+          setCurrentSessionId(null);
+          setMessages([]);
+        }
+        await loadSessions();
+        toast.success('Session deleted');
+      } else {
+        toast.error(result.error?.message || 'Failed to delete session');
+      }
+    } catch (error) {
+      toast.error('Failed to delete session');
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const archiveSession = async (sessionId: string) => {
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+
+    setSessionLoading(true);
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return;
+
+      const result = await chatSessionService.updateSession(sessionId, {
+        isArchived: !session.isArchived
+      });
+      if (result.success) {
+        await loadSessions();
+        toast.success(session.isArchived ? 'Session unarchived' : 'Session archived');
+      } else {
+        toast.error(result.error?.message || 'Failed to update session');
+      }
+    } catch (error) {
+      toast.error('Failed to archive session');
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const renameSession = async (sessionId: string, newTitle: string) => {
+    if (!isAuthenticated || !authService.isAuthenticated()) return;
+
+    setSessionLoading(true);
+    try {
+      const result = await chatSessionService.updateSession(sessionId, {
+        title: newTitle
+      });
+      if (result.success) {
+        await loadSessions();
+        toast.success('Session renamed');
+      } else {
+        toast.error(result.error?.message || 'Failed to rename session');
+      }
+    } catch (error) {
+      toast.error('Failed to rename session');
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && authService.isAuthenticated()) {
+      initializeSession();
+    } else {
+      setCurrentSessionId(null);
+      setSessions([]);
+    }
+  }, [isAuthenticated]);
+  */
 
   // Helper to detect dApp queries
   const isDAppQuery = (input: string): boolean => {
@@ -246,160 +674,36 @@ Issued At: ${new Date().toISOString()}`;
     return hasSearchWord && hasDAppKeyword;
   };
 
-  // Helper to detect Solana commands
-  const isSolanaQuery = (input: string): boolean => {
-    const lowerInput = input.toLowerCase();
-    const solanaKeywords = [
-      'balance', 'token', 'tokens', 'history', 'transactions', 'account', 'info', 
-      'wallet', 'slot', 'epoch', 'network'
-    ];
-    
-    return solanaKeywords.some(keyword => lowerInput.includes(keyword));
-  };
-
-  // Generate general Web3 responses for users without wallet connection
-  const generateGeneralResponse = async (input: string): Promise<string> => {
-    const lowerInput = input.toLowerCase();
-    
-    // Web3 Education Responses
-    if (lowerInput.includes('what is') || lowerInput.includes('explain')) {
-      if (lowerInput.includes('blockchain')) {
-        return `**Blockchain** is a distributed ledger technology that maintains a continuously growing list of records (blocks) that are linked and secured using cryptography. Each block contains a cryptographic hash of the previous block, a timestamp, and transaction data.
-
-Key features:
-• **Decentralized**: No single point of control
-• **Immutable**: Records cannot be altered once added
-• **Transparent**: All transactions are visible
-• **Secure**: Cryptographically protected
-
-Popular blockchains include Ethereum, Bitcoin, Polygon, and Solana. Each has unique features and use cases!`;
-      }
-      
-      if (lowerInput.includes('defi') || lowerInput.includes('decentralized finance')) {
-        return `**DeFi (Decentralized Finance)** refers to financial services built on blockchain networks that operate without traditional intermediaries like banks.
-
-Key DeFi concepts:
-• **DEXs**: Decentralized exchanges like Uniswap
-• **Lending**: Platforms like Aave and Compound
-• **Yield Farming**: Earning rewards by providing liquidity
-• **Staking**: Locking tokens to secure networks
-• **AMMs**: Automated Market Makers for trading
-
-DeFi offers higher yields but also higher risks compared to traditional finance. Always do your research!`;
-      }
-      
-      if (lowerInput.includes('nft')) {
-        return `**NFTs (Non-Fungible Tokens)** are unique digital assets that represent ownership of specific items on the blockchain.
-
-NFT characteristics:
-• **Unique**: Each NFT is one-of-a-kind
-• **Verifiable**: Ownership is provable on-chain
-• **Tradeable**: Can be bought/sold on marketplaces
-• **Programmable**: Can have built-in features
-
-Popular NFT use cases:
-• Digital art and collectibles
-• Gaming items and characters
-• Virtual real estate
-• Identity and credentials
-• Music and media
-
-Notable marketplaces include OpenSea, Rarible, and Magic Eden!`;
-      }
-    }
-    
-    // General Web3 questions
-    if (lowerInput.includes('wallet')) {
-      return `**Crypto Wallets** are tools that allow you to interact with blockchain networks. They store your private keys and enable you to send, receive, and manage cryptocurrencies.
-
-Types of wallets:
-• **Hot Wallets**: Connected to internet (MetaMask, Coinbase Wallet)
-• **Cold Wallets**: Offline storage (Ledger, Trezor)
-• **Custodial**: Third-party manages keys (Coinbase, Binance)
-• **Non-custodial**: You control keys (MetaMask, Trust Wallet)
-
-**Security Tips:**
-• Never share your seed phrase
-• Use hardware wallets for large amounts
-• Enable 2FA when available
-• Keep software updated
-
-Connect your wallet to access advanced features like vault management and dApp interactions!`;
-    }
-    
-    if (lowerInput.includes('gas') || lowerInput.includes('transaction fee')) {
-      return `**Gas fees** are the costs required to execute transactions on blockchain networks like Ethereum.
-
-Gas basics:
-• **Gas Price**: Amount you pay per unit of gas
-• **Gas Limit**: Maximum gas you're willing to use
-• **Total Cost**: Gas Price × Gas Limit
-
-Factors affecting gas fees:
-• Network congestion
-• Transaction complexity
-• Time of day
-• Network upgrades
-
-**Tips to save on gas:**
-• Use Layer 2 solutions (Polygon, Arbitrum)
-• Time transactions during low activity
-• Use gas estimation tools
-• Consider batch transactions
-
-Gas fees vary by network - some chains like Polygon have much lower fees!`;
-    }
-    
-    // Default response for general questions
-    return `I'd be happy to help you learn about Web3! Here are some topics I can explain:
-
-**Core Concepts:**
-• Blockchain technology
-• Cryptocurrencies and tokens
-• Smart contracts
-• Consensus mechanisms
-
-**DeFi Topics:**
-• Decentralized exchanges (DEXs)
-• Yield farming and staking
-• Liquidity pools
-• Lending protocols
-
-**NFTs & Digital Assets:**
-• How NFTs work
-• NFT marketplaces
-• Digital collectibles
-• Gaming NFTs
-
-**Security & Best Practices:**
-• Wallet security
-• Avoiding scams
-• Gas optimization
-• Risk management
-
-**Connect your wallet** to access advanced features like vault management, dApp interactions, and personalized portfolio tracking!
-
-What specific Web3 topic interests you most?`;
-  };
-
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    // Check if this is a dApp-related query that requires wallet connection
-    if (isDAppQuery(inputValue) && !isConnected) {
-      const dappWarningMessage: Message = {
-        id: Date.now().toString(),
-        content: '🔒 **Wallet Connection Required for dApp Interactions**\n\nTo interact with specific dApps, access the app store, or use vault features, please connect your wallet using the wallet icon in the header.\n\nHowever, I can still help you with general Web3 questions and explain dApps! What would you like to know about blockchain technology?',
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, dappWarningMessage]);
+    // Validate and sanitize input
+    const sanitizedInput = sanitizeInput(inputValue.trim());
+    if (!sanitizedInput) {
+      toast.error('Invalid input. Please try again.');
       return;
     }
 
+    if (!validateMessageLength(sanitizedInput, APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH)) {
+      toast.error(`Message too long. Maximum ${APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH} characters allowed.`);
+      return;
+    }
+
+    // Wallet connection check removed for MVP - to be released later
+    // if (isDAppQuery(sanitizedInput) && !isConnected) {
+    //   const dappWarningMessage: Message = {
+    //     id: Date.now().toString(),
+    //     content: '🔒 **Wallet Connection Required for dApp Interactions**\n\nTo interact with specific dApps or access the app store, please connect your wallet using the wallet icon in the header.\n\nHowever, I can still help you with general Web3 questions and explain dApps! What would you like to know about blockchain technology?',
+    //     role: 'assistant',
+    //     timestamp: new Date()
+    //   };
+    //   setMessages(prev => [...prev, dappWarningMessage]);
+    //   return;
+    // }
+
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: sanitizedInput,
       role: 'user',
       timestamp: new Date(),
     };
@@ -408,43 +712,29 @@ What specific Web3 topic interests you most?`;
     const currentInput = inputValue;
     setInputValue('');
     setIsLoading(true);
+    
+    // Scroll immediately when user sends a message
+    scrollToBottom(true);
 
     try {
-      // Check if it's a Solana command first
-      const isSolanaCommand = isSolanaQuery(currentInput);
-      
-      if (isSolanaCommand && isConnected) {
-        // Handle Solana commands with wallet address
-        const wallet = connectedWallets[0];
-        if (wallet) {
-          solanaAIChatService.setWalletAddress(wallet.address);
-          const response = await solanaAIChatService.processCommand(currentInput);
-          
-          const assistantMessage: Message = {
-            id: Date.now().toString(),
-            content: response.message,
-            role: 'assistant',
-            timestamp: new Date(),
-            suggestedActions: response.suggestedActions?.map(action => ({ 
-              label: action, 
-              action: action.toLowerCase().replace(/\s+/g, '_') 
-            }))
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          setIsLoading(false);
-          return;
-        }
-      }
 
-      // Check if it's a dApp search query (only case where we use local)
       const isDApp = isDAppQuery(currentInput);
+
+      const rawApiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1').trim().replace(/\/+$/, '');
+      const hasApiPrefix = /\/api\/v1$/i.test(rawApiUrl);
+      const baseWithVersion = hasApiPrefix ? rawApiUrl : `${rawApiUrl}/api/v1`;
+      const token = authService.getToken();
+      const tokenValid = token ? authService.isAuthenticated() : false;
+      const selectedProvider = sanitizeProvider(localStorage.getItem(STORAGE_KEYS.SELECTED_AI_PROVIDER));
       
+      // Session management removed for MVP - always use general session
+      const sessionId = getGeneralSessionId();
+
       let aiResponse = '';
-      let actions: any[] = [];
+      let actions: string[] = [];
+      let transaction: import('../types').FunctionCallTransaction | undefined;
 
       if (isDApp) {
-        // Only dApp searches use local data
         const { response, suggestedActions } = await aiDAppIntegration.parseIntent(
           currentInput,
           isConnected
@@ -452,68 +742,154 @@ What specific Web3 topic interests you most?`;
         aiResponse = response;
         actions = suggestedActions || [];
       } else {
-        // ALL other queries go to backend AI - no wallet required for general chat
-        try {
-          const API_BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
-          const primaryWallet = connectedWallets[0] || walletInfo;
-          const token = localStorage.getItem('jwtToken');
-          
-          console.log('Making AI request to:', `${API_BASE_URL}/api/ai/chat/public`);
-          console.log('Request body:', {
-            message: currentInput,
-            provider: localStorage.getItem(STORAGE_KEYS.SELECTED_AI_PROVIDER) || 'openai',
-            context: {
-              walletAddress: primaryWallet?.address || null,
-              userId: 'anonymous'
-            }
-          });
-          
-          // Try backend AI first (works without authentication for general questions)
-          const backendResponse = await fetch(`${API_BASE_URL}/api/ai/chat/public`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: currentInput,
-              provider: localStorage.getItem(STORAGE_KEYS.SELECTED_AI_PROVIDER) || 'openai', // Use vault's selected provider
-              context: {
-                walletAddress: primaryWallet?.address || null,
-                userId: 'anonymous'
-              }
-            }),
-          });
+        const primaryWallet = connectedWallets[0] || walletInfo;
+        const walletAddress = primaryWallet?.address || authService.getWalletAddress();
 
-          if (backendResponse.ok) {
-            const data = await backendResponse.json();
-            if (data.success && data.data?.message) {
-              aiResponse = data.data.message;
-            } else {
-              aiResponse = 'Sorry, I encountered an issue processing your request. Please try again.';
-            }
-          } else if (backendResponse.status === 401) {
-            // If backend requires auth, fall back to local AI response
-            const generalResponse = await generateGeneralResponse(currentInput);
-            aiResponse = generalResponse;
-          } else {
-            // If backend is down, fall back to local AI response
-            const generalResponse = await generateGeneralResponse(currentInput);
-            aiResponse = generalResponse;
+        if (!token || !tokenValid) {
+          const generalResult = await callGeneralAssistant(currentInput, baseWithVersion, {
+            isWalletConnected: isConnected,
+            isAuthenticated: false,
+            walletAddress: walletAddress || undefined,
+            token: token || undefined
+          });
+          // Use general response as-is (backend handles headers)
+          aiResponse = generalResult.message;
+          actions = generalResult.actions;
+          transaction = generalResult.transaction;
+        } else {
+          const requestContext: Record<string, any> = {
+            walletAddress: walletAddress || null,
+            chainId: primaryWallet?.chainId || 101,
+            source: 'bitai_frontend',
+            initiatedAt: new Date().toISOString(),
+            sessionId
+          };
+
+          const requestPayload: Record<string, any> = {
+            message: currentInput,
+            context: requestContext
+          };
+
+          if (selectedProvider) {
+            requestPayload.provider = selectedProvider;
           }
-        } catch (backendError) {
-          console.error('Backend AI error:', backendError);
-          // Fall back to local AI response if backend is unavailable
-          const generalResponse = await generateGeneralResponse(currentInput);
-          aiResponse = generalResponse;
+
+          const endpoint = `${baseWithVersion}/ai/chat`;
+
+          const callAuthenticatedChat = async (): Promise<void> => {
+            const headers: HeadersInit = {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            };
+
+            try {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(requestPayload),
+              });
+
+              const responseText = await response.text();
+              const trimmed = responseText.trim();
+
+              if (!response.ok) {
+                let parsedError: any = null;
+                try {
+                  parsedError = trimmed ? JSON.parse(trimmed) : null;
+                } catch {
+                  // Ignore parse errors
+                }
+
+                if (response.status === 402 && parsedError) {
+                  const upgradeMessage = parsedError?.message || parsedError?.error?.message || '�� Free tier limit reached. Please upgrade to continue.';
+                  const freeLimit = typeof parsedError?.freeLimit === 'number' ? parsedError.freeLimit : DEFAULT_FREE_WALLET_LIMIT;
+                  const attemptsUsed = typeof parsedError?.attemptsUsed === 'number' ? parsedError.attemptsUsed : undefined;
+                  aiResponse = upgradeMessage;
+                  if (typeof attemptsUsed === 'number') {
+                    aiResponse += `\n\nFree attempts used: ${attemptsUsed}/${freeLimit}`;
+                  }
+                  // actions = ['Upgrade to Pro', 'Go to Vault']; // Commented out vault action for MVP
+                  actions = ['Upgrade to Pro'];
+                  return;
+                }
+
+                aiResponse = '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.';
+                return;
+              }
+
+              if (!trimmed || !(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+                aiResponse = '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.';
+                return;
+              }
+
+              let data: any;
+              try {
+                data = JSON.parse(trimmed);
+              } catch (parseError) {
+                aiResponse = '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.';
+                return;
+              }
+
+              const payload = data?.data ?? data;
+              const messageText = payload?.response || payload?.message || data?.message || data?.response;
+
+              if (!messageText) {
+                aiResponse = '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.';
+                return;
+              }
+
+              // Use Web3 response as-is (backend already adds headers)
+              aiResponse = messageText;
+
+              // Parse transaction data if present (for function calling)
+              if (payload?.transaction) {
+                const tx = payload.transaction;
+                transaction = {
+                  id: tx.id || `tx-${Date.now()}`,
+                  type: tx.type || 'solana',
+                  operation: tx.operation || tx.functionName || 'unknown',
+                  rawTransaction: tx.rawTransaction || tx.transaction,
+                  transactionData: tx.transactionData || {
+                    from: tx.from,
+                    to: tx.to,
+                    amount: tx.amount,
+                    token: tx.token,
+                    contractAddress: tx.contractAddress,
+                    functionName: tx.functionName,
+                    parameters: tx.parameters
+                  },
+                  description: tx.description || tx.message,
+                  estimatedFee: tx.estimatedFee || tx.fee,
+                  requiresSigning: tx.requiresSigning !== false
+                };
+              }
+
+              if (Array.isArray(payload?.suggestedActions)) {
+                actions = payload.suggestedActions
+                  .filter((action: any) => typeof action === 'string' && action.trim().length > 0)
+                  .map((action: string) => action);
+              }
+
+              const usageInfo = payload?.usage;
+              if (usageInfo && typeof usageInfo.attemptsRemaining === 'number' && usageInfo.attemptsRemaining !== null) {
+                const freeLimit = typeof usageInfo.freeLimit === 'number' ? usageInfo.freeLimit : DEFAULT_FREE_WALLET_LIMIT;
+                const attemptsRemaining = Math.max(0, usageInfo.attemptsRemaining);
+                aiResponse += `\n\n🔓 Free attempts remaining: ${attemptsRemaining}/${freeLimit}`;
+              }
+            } catch (endpointError: any) {
+              aiResponse = '⚠️ I\'m having trouble connecting right now. Please try again in a moment, or check your internet connection.';
+            }
+          };
+
+          await callAuthenticatedChat();
         }
       }
 
-      // Add wallet context if connected
       if (isConnected && aiResponse) {
         const primaryWallet = connectedWallets[0] || walletInfo;
         if (primaryWallet?.address) {
-          const walletInfo_ = `\n\n💼 Connected: ${primaryWallet.address.slice(0, 6)}...${primaryWallet.address.slice(-4)}`;
-          aiResponse += walletInfo_;
+          const walletInfoSuffix = `\n\n💼 Connected: ${primaryWallet.address.slice(0, 6)}...${primaryWallet.address.slice(-4)}`;
+          aiResponse += walletInfoSuffix;
         }
       }
 
@@ -522,13 +898,34 @@ What specific Web3 topic interests you most?`;
         content: aiResponse,
         role: 'assistant',
         timestamp: new Date(),
-        suggestedActions: actions
+        suggestedActions: actions.map((action: string) => ({
+          label: action,
+          action: action.toLowerCase().replace(/\s+/g, '_')
+        })),
+        transaction,
+        transactionStatus: transaction ? 'pending' : undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       
+      // Scroll when assistant message is added
+      scrollToBottom();
+      
+      // Track AI chat activity (only if authenticated and has user ID)
+      if (isAuthenticated && authService.isAuthenticated()) {
+        try {
+          analyticsService.trackAIChat(
+            currentInput.length,
+            sessionId,
+            selectedProvider || undefined
+          );
+        } catch (error) {
+          // Silently fail analytics - don't break user experience
+          logger.warn('Analytics tracking failed:', error);
+        }
+      }
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error);
       const errorMessage: Message = {
         id: Date.now().toString() + '-error',
         content: '❌ Sorry, I encountered an error processing your request. Please try again.',
@@ -542,32 +939,45 @@ What specific Web3 topic interests you most?`;
   };
 
   const handleActionClick = async (action: string, dappId?: string) => {
-    if (action === 'browse_apps' || action === 'search_defi' || action === 'search_nft' || action === 'search_tools') {
-      navigate('/safe-store');
-      return;
-    }
+    // Non-MVP: dApp Store navigation commented out
+    // if (action === 'browse_apps' || action === 'search_defi' || action === 'search_nft' || action === 'search_tools') {
+    //   navigate('/bit-store');
+    //   return;
+    // }
 
-    if (action === 'connect_wallet') {
-      navigate('/vault');
-      const message: Message = {
-        id: Date.now().toString(),
-        content: '🔐 Please use the "Connect Wallet" button to connect your wallet.',
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, message]);
+    // Wallet connection action removed for MVP - to be released later
+    // if (action === 'connect_wallet') {
+    //   const message: Message = {
+    //     id: Date.now().toString(),
+    //     content: '🔐 Please use the "Connect Wallet" button to connect your wallet.',
+    //     role: 'assistant',
+    //     timestamp: new Date(),
+    //   };
+    //   setMessages(prev => [...prev, message]);
+    //   return;
+    // }
+
+    if (action === 'upgrade_to_pro') {
+      // Navigate to upgrade page when available
+      // navigate('/vault'); // Commented out for MVP - vault feature disabled
       return;
     }
+    
+    // if (action === 'view_vault') { // Commented out for MVP - vault feature disabled
+    //   navigate('/vault');
+    //   return;
+    // }
 
     if (action === 'view_dashboard') {
       navigate('/home');
       return;
     }
 
-    if (action === 'view_portfolio') {
-      navigate('/portfolio');
-      return;
-    }
+    // Non-MVP: Portfolio navigation commented out
+    // if (action === 'view_portfolio') {
+    //   navigate('/portfolio');
+    //   return;
+    // }
 
     if (action === 'view_transactions') {
       navigate('/home');
@@ -682,14 +1092,8 @@ What specific Web3 topic interests you most?`;
       } else {
         // Fallback to basic AI response
         aiResponse = {
-          response: `I understand you're asking about "${currentInput}". To provide you with wallet-specific assistance, please connect your wallet first. I can help you with general Web3 questions, DeFi protocols, NFT trading, and more once you're connected.`,
-          suggestedActions: [
-            {
-              action: 'connect_wallet',
-              label: 'Connect Wallet',
-              description: 'Connect your wallet to enable AI-assisted transactions'
-            }
-          ]
+          response: `I understand you're asking about "${currentInput}". I can help you with general Web3 questions, DeFi protocols, NFT trading, and more. What would you like to know?`,
+          suggestedActions: []
         };
       }
 
@@ -702,7 +1106,7 @@ What specific Web3 topic interests you most?`;
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Failed to send AI message:', error);
+      logger.error('Failed to send AI message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: 'Sorry, I encountered an error processing your request. Please try again.',
@@ -728,21 +1132,21 @@ What specific Web3 topic interests you most?`;
       setCopiedMessageId(messageId);
       setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      logger.error('Failed to copy text: ', err);
     }
   };
 
   const clearChat = () => {
-    console.log('Clearing chat...');
+    logger.debug('Clearing chat...');
     setMessages([
       {
         id: '1',
-        content: '👋 Hello! I\'m Bit AI, your intelligent Web3 companion.\n\n💬 **AI Chat Available:** You can chat with me about Web3 topics without connecting a wallet!\n\n🔒 **Wallet Features:** Connect your wallet to access:\n• Personal vault management\n• dApp store interactions\n• Wallet-specific AI assistance\n\nWhat would you like to know about Web3?',
+        content: '👋 Hello! I\'m bitAI, your intelligent Web3 companion.\n\n💬 You can ask me any questions and you will get the response from a Web3 perspective.\n\nWhat would you like to know about Web3?',
         role: 'assistant',
         timestamp: new Date(),
       },
     ]);
-    console.log('Chat cleared successfully');
+    logger.debug('Chat cleared successfully');
   };
 
   const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
@@ -783,31 +1187,162 @@ What specific Web3 topic interests you most?`;
                     ? 'bg-blue-100 text-blue-900 border border-blue-200' 
                     : 'bg-white border border-secondary-200 text-secondary-900')
             }`}>
-              <div className={`text-sm prose prose-sm max-w-none ${
-                theme === 'cyberpunk' ? 'text-white' : ''
+              <div className={`prose prose-sm max-w-none ${
+                theme === 'cyberpunk' 
+                  ? 'prose-invert text-white' 
+                  : 'text-secondary-900'
               }`}>
                 <ReactMarkdown
                   components={{
-                    // Custom rendering for better styling
-                    p: ({node, ...props}) => <p className={`mb-2 last:mb-0 ${
-                      theme === 'cyberpunk' ? 'text-white' : ''
-                    }`} {...props} />,
-                    ul: ({node, ...props}) => <ul className={`list-disc list-inside mb-2 ${
-                      theme === 'cyberpunk' ? 'text-white' : ''
-                    }`} {...props} />,
-                    ol: ({node, ...props}) => <ol className={`list-decimal list-inside mb-2 ${
-                      theme === 'cyberpunk' ? 'text-white' : ''
-                    }`} {...props} />,
-                    li: ({node, ...props}) => <li className={`mb-1 ${
-                      theme === 'cyberpunk' ? 'text-white' : ''
-                    }`} {...props} />,
-                    strong: ({node, ...props}) => <strong className={`font-semibold ${
-                      theme === 'cyberpunk' ? 'text-white' : ''
-                    }`} {...props} />,
-                    code: ({node, ...props}) => <code className={`px-1 py-0.5 rounded text-sm ${
+                    // Headers with proper hierarchy and spacing
+                    h1: ({node, ...props}) => <h1 className={`text-2xl font-bold mb-3 mt-4 first:mt-0 ${
                       theme === 'cyberpunk' 
-                        ? 'bg-blue-500/20 text-white border border-blue-400/30' 
-                        : 'bg-gray-100'
+                        ? 'text-white cyberpunk-font cyberpunk-gradient-text' 
+                        : 'text-secondary-900'
+                    }`} {...props} />,
+                    h2: ({node, ...props}) => <h2 className={`text-xl font-bold mb-2 mt-4 first:mt-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white cyberpunk-font' 
+                        : 'text-secondary-900'
+                    }`} {...props} />,
+                    h3: ({node, ...props}) => <h3 className={`text-lg font-semibold mb-2 mt-3 first:mt-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white cyberpunk-font' 
+                        : 'text-secondary-800'
+                    }`} {...props} />,
+                    h4: ({node, ...props}) => <h4 className={`text-base font-semibold mb-2 mt-3 first:mt-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white' 
+                        : 'text-secondary-800'
+                    }`} {...props} />,
+                    h5: ({node, ...props}) => <h5 className={`text-sm font-semibold mb-1 mt-2 first:mt-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white' 
+                        : 'text-secondary-700'
+                    }`} {...props} />,
+                    h6: ({node, ...props}) => <h6 className={`text-xs font-semibold mb-1 mt-2 first:mt-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white/90' 
+                        : 'text-secondary-700'
+                    }`} {...props} />,
+                    
+                    // Paragraphs with better spacing
+                    p: ({node, ...props}) => <p className={`mb-3 last:mb-0 leading-relaxed ${
+                      theme === 'cyberpunk' ? 'text-white/90' : 'text-secondary-700'
+                    }`} {...props} />,
+                    
+                    // Lists with better spacing and indentation
+                    ul: ({node, ...props}) => <ul className={`list-disc list-outside ml-6 mb-3 space-y-1 ${
+                      theme === 'cyberpunk' ? 'text-white/90' : 'text-secondary-700'
+                    }`} {...props} />,
+                    ol: ({node, ...props}) => <ol className={`list-decimal list-outside ml-6 mb-3 space-y-1 ${
+                      theme === 'cyberpunk' ? 'text-white/90' : 'text-secondary-700'
+                    }`} {...props} />,
+                    li: ({node, ...props}) => <li className={`leading-relaxed ${
+                      theme === 'cyberpunk' ? 'text-white/90' : 'text-secondary-700'
+                    }`} {...props} />,
+                    
+                    // Text formatting
+                    strong: ({node, ...props}) => <strong className={`font-semibold ${
+                      theme === 'cyberpunk' ? 'text-white' : 'text-secondary-900'
+                    }`} {...props} />,
+                    em: ({node, ...props}) => <em className={`italic ${
+                      theme === 'cyberpunk' ? 'text-white/90' : 'text-secondary-700'
+                    }`} {...props} />,
+                    
+                    // Inline code
+                    code: ({node, inline, className, children, ...props}: any) => {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const language = match ? match[1] : '';
+                      
+                      if (!inline && language) {
+                        return (
+                          <SyntaxHighlighter
+                            language={language}
+                            style={theme === 'cyberpunk' ? vscDarkPlus : oneLight}
+                            PreTag="div"
+                            className="rounded-lg mb-3 mt-2"
+                            customStyle={{
+                              margin: 0,
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
+                              lineHeight: '1.5',
+                            }}
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        );
+                      }
+                      
+                      return (
+                        <code className={`px-1.5 py-0.5 rounded text-sm font-mono ${
+                          theme === 'cyberpunk' 
+                            ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30' 
+                            : 'bg-gray-100 text-gray-800 border border-gray-200'
+                        }`} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    
+                    // Code blocks (pre) - handled by code component above
+                    pre: ({node, ...props}) => <div className="my-3" {...props} />,
+                    
+                    // Blockquotes
+                    blockquote: ({node, ...props}) => <blockquote className={`border-l-4 pl-4 my-3 italic ${
+                      theme === 'cyberpunk' 
+                        ? 'border-green-400/50 text-white/80 bg-green-500/5 py-2' 
+                        : 'border-primary-300 text-secondary-600 bg-primary-50/50 py-2'
+                    }`} {...props} />,
+                    
+                    // Links
+                    a: ({node, ...props}: any) => <a 
+                      className={`underline hover:no-underline transition-colors ${
+                        theme === 'cyberpunk' 
+                          ? 'text-green-400 hover:text-green-300' 
+                          : 'text-primary-600 hover:text-primary-700'
+                      }`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      {...props}
+                    />,
+                    
+                    // Horizontal rules
+                    hr: ({node, ...props}) => <hr className={`my-4 border-0 ${
+                      theme === 'cyberpunk' 
+                        ? 'border-t border-green-400/30' 
+                        : 'border-t border-secondary-200'
+                    }`} {...props} />,
+                    
+                    // Tables
+                    table: ({node, ...props}) => <div className="overflow-x-auto my-3">
+                      <table className={`min-w-full border-collapse ${
+                        theme === 'cyberpunk' 
+                          ? 'border border-green-400/30' 
+                          : 'border border-secondary-200'
+                      }`} {...props} />
+                    </div>,
+                    thead: ({node, ...props}) => <thead className={
+                      theme === 'cyberpunk' 
+                        ? 'bg-green-500/20' 
+                        : 'bg-secondary-50'
+                    } {...props} />,
+                    tbody: ({node, ...props}) => <tbody {...props} />,
+                    tr: ({node, ...props}) => <tr className={
+                      theme === 'cyberpunk' 
+                        ? 'border-b border-green-400/20' 
+                        : 'border-b border-secondary-100'
+                    } {...props} />,
+                    th: ({node, ...props}) => <th className={`px-4 py-2 text-left font-semibold ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white border-r border-green-400/20' 
+                        : 'text-secondary-900 border-r border-secondary-200'
+                    }`} {...props} />,
+                    td: ({node, ...props}) => <td className={`px-4 py-2 ${
+                      theme === 'cyberpunk' 
+                        ? 'text-white/90 border-r border-green-400/20' 
+                        : 'text-secondary-700 border-r border-secondary-100'
                     }`} {...props} />,
                   }}
                 >
@@ -815,6 +1350,41 @@ What specific Web3 topic interests you most?`;
                 </ReactMarkdown>
               </div>
             </div>
+            
+            {/* Transaction Preview */}
+            {!isUser && message.transaction && (
+              <TransactionPreview
+                transaction={message.transaction}
+                onSign={() => setSigningTransaction({ transaction: message.transaction!, messageId: message.id })}
+                onCancel={() => {
+                  setMessages(prev => prev.map(m => 
+                    m.id === message.id 
+                      ? { ...m, transactionStatus: 'failed' as const }
+                      : m
+                  ));
+                }}
+                theme={theme}
+              />
+            )}
+
+            {/* Transaction Status Display */}
+            {!isUser && message.transactionStatus && message.transaction && (
+              <div className={`mt-2 px-3 py-2 rounded text-xs ${
+                theme === 'cyberpunk'
+                  ? message.transactionStatus === 'confirmed'
+                    ? 'bg-green-500/20 border border-green-400/50 text-green-300'
+                    : message.transactionStatus === 'failed'
+                    ? 'bg-red-500/20 border border-red-400/50 text-red-300'
+                    : 'bg-yellow-500/20 border border-yellow-400/50 text-yellow-300'
+                  : message.transactionStatus === 'confirmed'
+                  ? 'bg-green-50 border border-green-200 text-green-800'
+                  : message.transactionStatus === 'failed'
+                  ? 'bg-red-50 border border-red-200 text-red-800'
+                  : 'bg-yellow-50 border border-yellow-200 text-yellow-800'
+              }`}>
+                Status: {message.transactionStatus.charAt(0).toUpperCase() + message.transactionStatus.slice(1)}
+              </div>
+            )}
             
             {/* Suggested Action Buttons */}
             {!isUser && message.suggestedActions && message.suggestedActions.length > 0 && (
@@ -860,15 +1430,69 @@ What specific Web3 topic interests you most?`;
                 </button>
               )}
             </div>
+            
+            {/* Feedback for assistant messages */}
+            {!isUser && isAuthenticated && (
+              <MessageFeedback
+                messageId={message.id}
+                onFeedbackSubmitted={() => {
+                  // Optionally refresh session or show confirmation
+                }}
+              />
+            )}
           </div>
       </div>
     </div>
   );
   };
 
+  // Handle transaction signing
+  const handleTransactionSigned = (signature: string, txHash?: string) => {
+    if (!signingTransaction) return;
+    
+    setMessages(prev => prev.map(m => 
+      m.id === signingTransaction.messageId 
+        ? { 
+            ...m, 
+            transactionStatus: 'sent' as const,
+            content: m.content + `\n\n✅ Transaction signed and sent!\n\nSignature: \`${signature.slice(0, 16)}...${signature.slice(-8)}\``
+          }
+        : m
+    ));
+    
+    setSigningTransaction(null);
+  };
+
+  const handleTransactionError = (error: string) => {
+    if (!signingTransaction) return;
+    
+    setMessages(prev => prev.map(m => 
+      m.id === signingTransaction.messageId 
+        ? { 
+            ...m, 
+            transactionStatus: 'failed' as const,
+            content: m.content + `\n\n❌ Transaction failed: ${error}`
+          }
+        : m
+    ));
+    
+    setSigningTransaction(null);
+  };
+
   // Main component return
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Transaction Signing Modal */}
+      {signingTransaction && (
+        <TransactionSigningModal
+          transaction={signingTransaction.transaction}
+          isOpen={!!signingTransaction}
+          onClose={() => setSigningTransaction(null)}
+          onSigned={handleTransactionSigned}
+          onError={handleTransactionError}
+          theme={theme}
+        />
+      )}
       {/* Header */}
       <div className={`flex items-center justify-between mb-6 mt-8 ${theme === 'cyberpunk' ? 'cyberpunk-card p-6' : ''}`}>
         <div className="flex items-center space-x-3">
@@ -889,7 +1513,7 @@ What specific Web3 topic interests you most?`;
                 ? 'cyberpunk-font cyberpunk-gradient-text cyberpunk-text-glow' 
                 : 'text-gradient bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent'
             }`}>
-              Bit AI
+              bitAI
             </h1>
             <p className={`${
               theme === 'cyberpunk' 
@@ -919,6 +1543,20 @@ What specific Web3 topic interests you most?`;
         </div>
         
         <div className="flex items-center space-x-2">
+          {/* Sessions button - Commented out for MVP - to be released later */}
+          {/* 
+          {isAuthenticated && (
+            <Button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Sessions
+            </Button>
+          )}
+          */}
           {messages.length > 0 && (
             <Button
               onClick={clearChat}
@@ -933,6 +1571,23 @@ What specific Web3 topic interests you most?`;
         </div>
       </div>
 
+      {/* Session Sidebar - Commented out for MVP - to be released later */}
+      {/* 
+      {isAuthenticated && (
+        <SessionListSidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSelectSession={switchToSession}
+          onCreateNewSession={createNewSession}
+          onDeleteSession={deleteSession}
+          onArchiveSession={archiveSession}
+          onRenameSession={renameSession}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
+      */}
+
       <Card className={`shadow-lg transition-all duration-500 ${
         theme === 'cyberpunk' 
           ? 'cyberpunk-card' 
@@ -946,7 +1601,7 @@ What specific Web3 topic interests you most?`;
           {/* Messages Container */}
           <div 
             ref={messagesContainerRef}
-            className={`h-[calc(100vh-280px)] overflow-y-auto p-6 space-y-4 transition-all duration-500 ${
+            className={`h-[calc(100vh-280px)] overflow-y-auto p-6 space-y-4 transition-all duration-500 chat-messages-scrollbar ${
               theme === 'cyberpunk' 
                 ? 'bg-transparent' 
                 : 'bg-gradient-to-br from-white to-primary-50/30'
@@ -958,10 +1613,10 @@ What specific Web3 topic interests you most?`;
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-secondary-700 mb-2">
-                  Welcome to Bit AI
+                  Welcome to bitAI
                 </h3>
                 <p className="text-secondary-500 max-w-md mb-6">
-                  Your intelligent assistant for Web3. Ask me anything about blockchain, DeFi, NFTs, or connect your wallet for personalized insights.
+                  Your intelligent assistant for Web3. Ask me anything about blockchain, DeFi, NFTs, and get responses from a Web3 perspective.
                 </p>
                 
                 {/* Quick Actions */}
@@ -1019,6 +1674,8 @@ What specific Web3 topic interests you most?`;
                     </div>
                   </div>
                 )}
+                {/* Scroll anchor - invisible element at the bottom for auto-scrolling */}
+                <div ref={messagesEndRef} className="h-1" />
               </>
             )}
           </div>
@@ -1040,7 +1697,7 @@ What specific Web3 topic interests you most?`;
                       handleSendMessage();
                     }
                   }}
-                  placeholder={theme === 'cyberpunk' ? "I'm your Solana assistant, how can I help you?" : "Ask me anything about Web3, DeFi, NFTs..."}
+                  placeholder={theme === 'cyberpunk' ? "I'm your Solana assistant, how can I help you?" : "Ask me anything..."}
                   disabled={isLoading}
                   className={`resize-none transition-all duration-300 ${
                     theme === 'cyberpunk' 
@@ -1068,3 +1725,6 @@ What specific Web3 topic interests you most?`;
     </div>
   );
 };
+
+
+

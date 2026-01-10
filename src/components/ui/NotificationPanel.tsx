@@ -1,3 +1,17 @@
+/**
+ * Notification Panel Component
+ * 
+ * Displays a notification panel with:
+ * - List of all notifications
+ * - Unread count badge
+ * - Mark as read/unread functionality
+ * - Delete notifications
+ * - Filter by type
+ * - Theme-aware styling (cyberpunk/modern)
+ * 
+ * Currently commented out in Header.tsx for MVP.
+ * Can be enabled when notification system is ready.
+ */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';

@@ -48,7 +48,7 @@ const faqData: FAQItem[] = [
   },
   {
     id: '4',
-    question: 'How do I submit a dApp to the Bit AppStore?',
+    question: 'How do I submit a dApp to the bitAppStore?',
     answer: 'Navigate to the Developer Portal, click "Submit New dApp", fill out the submission form with your dApp details, smart contract information, and AI integration preferences, then submit for review.',
     category: 'developer'
   },
@@ -178,7 +178,7 @@ const HelpSupportPage: React.FC = () => {
                   }`}
                 >
                   <MessageSquare className="w-5 h-5 mr-3" />
-                  {theme === 'cyberpunk' ? 'SAFE AI ASSISTANT' : 'AI Chat Assistant'}
+                  {theme === 'cyberpunk' ? 'BIT AI ASSISTANT' : 'AI Chat Assistant'}
                 </a>
                 <a
                   href="/developer"
@@ -200,7 +200,7 @@ const HelpSupportPage: React.FC = () => {
                   }`}
                 >
                   <BookOpen className="w-5 h-5 mr-3" />
-                  {theme === 'cyberpunk' ? 'SAFE SDK DATABASE' : 'SDK Documentation'}
+                  {theme === 'cyberpunk' ? 'BIT SDK DATABASE' : 'SDK Documentation'}
                 </a>
                 <a
                   href="/vault"
@@ -221,14 +221,14 @@ const HelpSupportPage: React.FC = () => {
                 </h4>
                 <div className="space-y-2">
                   <a
-                    href="mailto:support@safebrowser.com"
+                    href="mailto:support@bitai.app"
                     className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors"
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    support@safebrowser.com
+                    support@bitai.app
                   </a>
                   <a
-                    href="https://github.com/safebrowser"
+                    href="https://github.com/bitai"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors"
@@ -237,7 +237,7 @@ const HelpSupportPage: React.FC = () => {
                     GitHub
                   </a>
                   <a
-                    href="https://twitter.com/safebrowser"
+                    href="https://twitter.com/bitai"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors"
@@ -246,7 +246,7 @@ const HelpSupportPage: React.FC = () => {
                     Twitter
                   </a>
                   <a
-                    href="https://discord.gg/safebrowser"
+                    href="https://discord.gg/bitai"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors"
