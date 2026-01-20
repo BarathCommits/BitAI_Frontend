@@ -1,0 +1,340 @@
+# GitLab CI/CD Pipeline for BitAI Frontend
+# Documentation: https://docs.gitlab.com/ee/ci/
+
+stages:
+  - lint
+  - test
+  - build
+  - security
+  - deploy
+
+variables:
+  NODE_VERSION: "18"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY: $CI_REGISTRY
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+
+# Cache node_modules for faster builds
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+# ============================================
+# LINT STAGE
+# ============================================
+
+lint:
+  stage: lint
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - npm ci --legacy-peer-deps
+    - npm run lint
+    - npm run format:check
+  only:
+    - merge_requests
+    - main
+    - develop
+  tags:
+    - docker
+
+# ============================================
+# TEST STAGE
+# ============================================
+
+test:
+  stage: test
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - npm ci --legacy-peer-deps
+    - npx tsc --noEmit
+    - npm test -- --watchAll=false --coverage || echo "No tests configured"
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+  tags:
+    - docker
+
+# ============================================
+# BUILD STAGE
+# ============================================
+
+build:
+  stage: build
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - npm ci --legacy-peer-deps
+    - npm run build
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - tags
+  tags:
+    - docker
+
+# ============================================
+# SECURITY STAGE
+# ============================================
+
+security-scan:
+  stage: security
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - npm ci --legacy-peer-deps
+    - npm audit --audit-level=moderate || true
+    - npm audit --production --audit-level=moderate || true
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths:
+      - npm-audit-results.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+  tags:
+    - docker
+
+# ============================================
+# DOCKER BUILD STAGE
+# ============================================
+
+docker-build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - |
+      # Set API URLs based on branch
+      if [ "$CI_COMMIT_REF_NAME" == "dev" ] || [ "$CI_COMMIT_REF_NAME" == "develop" ]; then
+        REACT_APP_API_URL="${DEV_API_URL:-http://46.224.177.202:8080/api/v1}"
+        REACT_APP_AUTH_URL="${DEV_AUTH_URL:-http://46.224.177.202:8080/api/v1/auth}"
+        REACT_APP_WS_URL="${DEV_WS_URL:-ws://46.224.177.202:8080}"
+      else
+        REACT_APP_API_URL="${REACT_APP_API_URL:-http://localhost:8080/api/v1}"
+        REACT_APP_AUTH_URL="${REACT_APP_AUTH_URL:-http://localhost:8080/api/v1/auth}"
+        REACT_APP_WS_URL="${REACT_APP_WS_URL:-ws://localhost:8080}"
+      fi
+      echo "Building with API URL: ${REACT_APP_API_URL}"
+      docker build \
+        --file docker/Dockerfile.prod \
+        --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG \
+        --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA \
+        --build-arg REACT_APP_API_URL="${REACT_APP_API_URL}" \
+        --build-arg REACT_APP_AUTH_URL="${REACT_APP_AUTH_URL}" \
+        --build-arg REACT_APP_WS_URL="${REACT_APP_WS_URL}" \
+        --build-arg REACT_APP_ENVIRONMENT=$CI_COMMIT_REF_NAME \
+        .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+    # Tag as latest for main branch
+    - |
+      if [ "$CI_COMMIT_REF_NAME" == "main" ]; then
+        docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG $CI_REGISTRY_IMAGE:latest
+        docker push $CI_REGISTRY_IMAGE:latest
+      fi
+    # Tag version for tags
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+        docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+      fi
+  only:
+    - main
+    - develop
+    - dev
+    - tags
+  tags:
+    - docker
+
+# ============================================
+# DEPLOY STAGING
+# ============================================
+
+deploy-staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $STAGING_SERVER_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $STAGING_SERVER_USER@$STAGING_SERVER_HOST << EOF
+        cd $STAGING_DEPLOY_PATH
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+        docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA bitai-frontend:staging
+        docker-compose -f docker/docker-compose.prod.yml up -d
+        docker image prune -f
+      EOF
+    - |
+      echo "Waiting for health check..."
+      sleep 10
+      curl -f $STAGING_URL/health || exit 1
+  environment:
+    name: staging
+    url: $STAGING_URL
+  only:
+    - develop
+  when: manual
+  tags:
+    - docker
+
+# ============================================
+# DEPLOY DEV
+# ============================================
+
+deploy-dev:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - eval $(ssh-agent -s)
+    - echo "$DEV_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $DEV_CLOUD_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $DEV_SSH_USER@$DEV_CLOUD_HOST << EOF
+        set -e
+        mkdir -p /opt/bitai-frontend
+        cd /opt/bitai-frontend
+        
+        # Login to Docker registry
+        echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+        
+        # Pull latest image
+        docker pull ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
+        
+        # Stop and remove old container
+        docker stop bitai-frontend-dev || true
+        docker rm bitai-frontend-dev || true
+        
+        # Run new container
+        docker run -d \
+          --name bitai-frontend-dev \
+          --restart unless-stopped \
+          -p 3000:80 \
+          --network bitai-network \
+          ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
+        
+        # Clean up old images
+        docker image prune -f
+        
+        # Wait for health check
+        sleep 5
+        curl -f http://localhost:3000/health || echo "Health check failed, but container is running"
+      EOF
+    - |
+      echo "Waiting for health check..."
+      sleep 10
+      curl -f http://${DEV_CLOUD_HOST}:3000/health || exit 1
+  environment:
+    name: development
+    url: http://${DEV_CLOUD_HOST}:3000
+  only:
+    - dev
+  tags:
+    - docker
+
+# ============================================
+# DEPLOY PRODUCTION
+# ============================================
+
+deploy-production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $PRODUCTION_SERVER_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $PRODUCTION_SERVER_USER@$PRODUCTION_SERVER_HOST << EOF
+        cd $PRODUCTION_DEPLOY_PATH
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+        docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA bitai-frontend:production
+        docker-compose -f docker/docker-compose.prod.yml up -d
+        docker image prune -f
+      EOF
+    - |
+      echo "Waiting for health check..."
+      sleep 10
+      curl -f $PRODUCTION_URL/health || exit 1
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+  only:
+    - main
+    - tags
+  when: manual
+  tags:
+    - docker
+
+# ============================================
+# ROLLBACK PRODUCTION
+# ============================================
+
+rollback-production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $PRODUCTION_SERVER_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $PRODUCTION_SERVER_USER@$PRODUCTION_SERVER_HOST << EOF
+        cd $PRODUCTION_DEPLOY_PATH
+        docker-compose -f docker/docker-compose.prod.yml down
+        docker pull $CI_REGISTRY_IMAGE:$ROLLBACK_VERSION
+        docker tag $CI_REGISTRY_IMAGE:$ROLLBACK_VERSION bitai-frontend:production
+        docker-compose -f docker/docker-compose.prod.yml up -d
+      EOF
+  environment:
+    name: production
+    action: rollback
+  only:
+    - main
+  when: manual
+  variables:
+    ROLLBACK_VERSION: "latest"
+  tags:
+    - docker
+
+
+

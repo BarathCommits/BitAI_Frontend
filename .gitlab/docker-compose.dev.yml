@@ -1,0 +1,38 @@
+# ============================================================================
+# DOCKER COMPOSE FOR DEVELOPMENT CLOUD ENVIRONMENT (FRONTEND)
+# ============================================================================
+# 
+# This is the docker-compose.yml file for deploying the frontend to dev cloud.
+# 
+# Usage:
+#   docker-compose -f .gitlab/docker-compose.dev.yml up -d
+# 
+# Environment Variables:
+#   - DOCKER_REGISTRY: Docker registry URL
+#   - IMAGE_TAG: Image tag (usually git commit SHA)
+# 
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # Frontend Service
+  bitai_frontend:
+    image: ${DOCKER_REGISTRY}/frontend:${IMAGE_TAG:-latest}
+    container_name: bitai_frontend_dev
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - bitai-network
+
+networks:
+  bitai-network:
+    external: true
+    name: bitai-network
