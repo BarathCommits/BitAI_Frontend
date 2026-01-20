@@ -214,7 +214,7 @@ deploy-dev:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client curl
+    - apk add --no-cache openssh-client curl docker-cli docker-compose
     - eval $(ssh-agent -s)
     - echo "$DEV_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
@@ -224,32 +224,60 @@ deploy-dev:
     - |
       ssh $DEV_SSH_USER@$DEV_CLOUD_HOST << EOF
         set -e
-        mkdir -p /opt/bitai-frontend
+        mkdir -p /opt/bitai-frontend/.gitlab
         cd /opt/bitai-frontend
+        
+        # Copy docker-compose file
+        cat > .gitlab/docker-compose.dev.yml << 'COMPOSE_EOF'
+      version: '3.8'
+      services:
+        bitai_frontend:
+          image: ${DOCKER_REGISTRY}/frontend:${CI_COMMIT_SHORT_SHA}
+          container_name: bitai_frontend_dev
+          ports:
+            - "3000:80"
+          restart: unless-stopped
+          healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+          networks:
+            - bitai-network
+      networks:
+        bitai-network:
+          external: true
+          name: bitai-network
+      COMPOSE_EOF
         
         # Login to Docker registry
         echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
         
+        # Export variables for docker-compose
+        export DOCKER_REGISTRY="${CI_REGISTRY_IMAGE%/*}"
+        export IMAGE_TAG="${CI_COMMIT_SHORT_SHA}"
+        
         # Pull latest image
         docker pull ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
         
-        # Stop and remove old container
-        docker stop bitai-frontend-dev || true
-        docker rm bitai-frontend-dev || true
+        # Use docker compose or docker-compose
+        DOCKER_COMPOSE_CMD="docker compose"
+        if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 2>&1; then
+          DOCKER_COMPOSE_CMD="docker-compose"
+        fi
         
-        # Run new container
-        docker run -d \
-          --name bitai-frontend-dev \
-          --restart unless-stopped \
-          -p 3000:80 \
-          --network bitai-network \
-          ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
+        # Stop and remove old containers
+        \$DOCKER_COMPOSE_CMD -f .gitlab/docker-compose.dev.yml down || true
+        
+        # Start new container
+        \$DOCKER_COMPOSE_CMD -f .gitlab/docker-compose.dev.yml up -d
         
         # Clean up old images
         docker image prune -f
         
         # Wait for health check
-        sleep 5
+        sleep 10
         curl -f http://localhost:3000/health || echo "Health check failed, but container is running"
       EOF
     - |
