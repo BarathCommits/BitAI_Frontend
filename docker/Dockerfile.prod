@@ -29,8 +29,17 @@ COPY config/tsconfig.json ./tsconfig.json  # TypeScript config stays in /config/
 COPY public ./public
 COPY src ./src
 
-# Copy or create production env (optional - can be passed via docker-compose env vars)
-RUN echo "REACT_APP_API_URL=\${REACT_APP_API_URL}" > .env.production && \
+# Accept build arguments for environment variables
+ARG REACT_APP_API_URL=http://localhost:8080/api/v1
+ARG REACT_APP_AUTH_URL=http://localhost:8080/api/v1/auth
+ARG REACT_APP_WS_URL=ws://localhost:8080
+ARG REACT_APP_ENVIRONMENT=production
+
+# Create production env file with build args
+RUN echo "REACT_APP_API_URL=${REACT_APP_API_URL}" > .env.production && \
+    echo "REACT_APP_AUTH_URL=${REACT_APP_AUTH_URL}" >> .env.production && \
+    echo "REACT_APP_WS_URL=${REACT_APP_WS_URL}" >> .env.production && \
+    echo "REACT_APP_ENVIRONMENT=${REACT_APP_ENVIRONMENT}" >> .env.production && \
     echo "NODE_ENV=production" >> .env.production
 
 # Build the app
